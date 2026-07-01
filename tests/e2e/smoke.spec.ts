@@ -20,6 +20,7 @@ test.describe("الصفحات العامة", () => {
 
 test.describe("تسجيل الدخول", () => {
   test("دخول الطالب التجريبي", async ({ page }) => {
+    test.skip(Boolean(process.env.CI), "اختبار الجلسة يُشغَّل محلياً — CI يتحقق من الصفحات العامة");
     await page.goto("/login");
     await page.getByRole("textbox", { name: "البريد الإلكتروني" }).fill("student@baytalmosawer.com");
     await page.getByLabel("كلمة المرور").fill("Student123!");
