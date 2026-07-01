@@ -1,5 +1,7 @@
 import { Header } from "@/components/shared/header";
 import { DashboardSidebar, type SidebarItem } from "@/components/shared/dashboard-sidebar";
+import { requireRole } from "@/lib/auth/session";
+import { UserRole } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -10,11 +12,13 @@ const instructorNav: SidebarItem[] = [
   { href: "/instructor/students", label: "الطلاب", icon: "Users" },
 ];
 
-export default function InstructorLayout({
+export default async function InstructorLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  await requireRole([UserRole.INSTRUCTOR, UserRole.ADMIN]);
+
   return (
     <>
       <Header />

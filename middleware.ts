@@ -1,6 +1,7 @@
+import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
 import type { UserRole, UserStatus } from "@prisma/client";
-import { auth } from "@/lib/auth/auth";
+import { authConfig } from "@/lib/auth/auth.config";
 
 type RouteAccess = {
   prefix: string;
@@ -14,6 +15,9 @@ const PROTECTED_ROUTES: RouteAccess[] = [
 ];
 
 const BLOCKED_STATUSES: UserStatus[] = ["SUSPENDED", "PENDING_VERIFICATION"];
+
+/** Edge-safe middleware — بدون Prisma. التحقق الكامل من DB في layouts عبر requireAuth. */
+const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;

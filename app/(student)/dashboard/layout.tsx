@@ -1,5 +1,6 @@
 import { Header } from "@/components/shared/header";
 import { DashboardSidebar, type SidebarItem } from "@/components/shared/dashboard-sidebar";
+import { requireAuth } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
@@ -11,11 +12,13 @@ const studentNav: SidebarItem[] = [
   { href: "/dashboard/profile", label: "الملف الشخصي", icon: "User" },
 ];
 
-export default function StudentDashboardLayout({
+export default async function StudentDashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  await requireAuth();
+
   return (
     <>
       <Header />

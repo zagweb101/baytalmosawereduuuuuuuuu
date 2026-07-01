@@ -1,5 +1,7 @@
 import { Header } from "@/components/shared/header";
 import { DashboardSidebar, type SidebarItem } from "@/components/shared/dashboard-sidebar";
+import { requireRole } from "@/lib/auth/session";
+import { UserRole } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -19,11 +21,13 @@ const adminNav: SidebarItem[] = [
   { href: "/admin/reports", label: "التقارير", icon: "BarChart3" },
 ];
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  await requireRole(UserRole.ADMIN);
+
   return (
     <>
       <Header />
