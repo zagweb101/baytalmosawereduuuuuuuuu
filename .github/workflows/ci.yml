@@ -34,7 +34,6 @@ jobs:
       NEXT_PUBLIC_PLATFORM_NAME: بيت المصور
       PAYMENT_PROVIDER: mock
       EMAIL_MOCK: "true"
-      NODE_ENV: production
       CI: "true"
 
     steps:
@@ -45,7 +44,8 @@ jobs:
           node-version: "22"
           cache: npm
 
-      - run: npm ci
+      # NODE_ENV=production يتخطى devDependencies (tsx, prisma CLI, playwright)
+      - run: npm ci --include=dev
 
       - run: npx prisma migrate deploy
 
@@ -54,7 +54,11 @@ jobs:
       - run: npm run lint
 
       - run: npm run build
+        env:
+          NODE_ENV: production
 
       - run: npx playwright install chromium --with-deps
 
       - run: npm run test:e2e
+        env:
+          NODE_ENV: production

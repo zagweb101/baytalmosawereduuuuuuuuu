@@ -1,92 +1,120 @@
 # تقرير فحص النظام — منصة بيت المصور
 
 **التاريخ:** 1 يوليو 2026  
-**الإصدار:** 8.2 — فحص ما قبل الرفع والنشر  
-**الحالة:** 🟢 **جاهز للرفع** (المرحلة 8)
+**الإصدار:** 8.3  
+**الحالة:** 🟢 **الإنتاج مستقر** | 🟡 **CI يحتاج إصلاح seed**
 
 ---
 
 ## التقييم العام
 
-**🟢 الكود يمر الفحص — جاهز للنشر على Railway**
-
 | المؤشر | الحالة | ملاحظة |
 |--------|--------|--------|
-| Build / TypeScript | ✅ | **42** مساراً (يشمل `/api/health`) |
-| ESLint | ✅ | 0 أخطاء، 12 تحذيراً (unused imports) |
-| أسرار في الكود | ✅ | لا مفاتيح حقيقية — `.env.example` فقط |
-| Middleware (Edge) | ✅ | `394f2d5` — بدون Prisma |
-| الإنتاج الحالي — عام | ✅ | `/`, `/login`, `/courses`, `/verify-certificate` → 200 |
-| الإنتاج الحالي — محمي | ✅ | `/dashboard`, `/admin`, `/instructor` → 307 → `/login` |
-| `/api/health` على الإنتاج | ⏳ | **404** — لم يُنشر بعد (متوقع قبل الرفع) |
-| PostgreSQL | ✅ | 3 migrations |
+| Build / TypeScript | ✅ | **42** مساراً |
+| ESLint | ✅ | 0 أخطاء، 12 تحذيراً |
+| الإنتاج — عام | ✅ | `/`, `/login`, `/courses`, `/verify-certificate` → 200 |
+| الإنتاج — محمي | ✅ | `/dashboard`, `/admin`, `/instructor` → 307 → `/login` |
+| `/api/health` | ✅ | `status: ok`, DB متصل |
+| `productionReady` | ⚠️ | `false` — دفع وبريد Mock |
+| آخر commit (GitHub) | ✅ | `59360b5` — CI workflow |
+| Railway deploy | ✅ | phase 8 منشور (`48ca934`+) |
+| CI GitHub Actions | ❌ | أول تشغيل **فشل** عند `prisma db seed` |
 | الدفع إنتاج | ⚠️ | `PAYMENT_PROVIDER=mock` |
 | البريد إنتاج | ⚠️ | `EMAIL_MOCK=true` |
+| كلمات مرور seed | ⚠️ | لم تُدوَّر بعد |
 
-**الرابط:** https://baytalmosawereduuuuuuuuu-production.up.railway.app
-
----
-
-## ما سيُرفع في هذا النشر (المرحلة 8)
-
-| الملف / المكوّن | الغرض |
-|-----------------|--------|
-| `app/api/health/route.ts` | فحص DB + ملخص الخدمات |
-| `lib/config/infrastructure.ts` | تقييم جاهزية Stripe/SMTP/S3 |
-| `components/shared/infrastructure-status-card.tsx` | لوحة في `/admin/settings` |
-| `scripts/rotate-seed-passwords.ts` | تدوير كلمات مرور البذور |
-| `.github/workflows/ci.yml` | lint + build + migrate + E2E |
-| `railway.toml` | healthcheck → `/api/health` |
-
-**الـ commit السابق على الإنتاج:** `394f2d5` (middleware hotfix)
+**الإنتاج:** https://baytalmosawereduuuuuuuuu-production.up.railway.app  
+**Actions:** https://github.com/zagweb101/baytalmosawereduuuuuuuuu/actions
 
 ---
 
-## فحص ما قبل الرفع — تفاصيل
+## فحص الإنتاج (مباشر)
 
-### البناء
+| المسار | HTTP | ملاحظة |
+|--------|------|--------|
+| `/` | 200 | |
+| `/login` | 200 | |
+| `/courses` | 200 | |
+| `/verify-certificate` | 200 | |
+| `/dashboard` | 307 | → `/login` ✅ |
+| `/admin` | 307 | → `/login` ✅ |
+| `/instructor` | 307 | → `/login` ✅ |
+| `/api/health` | 200 | `payments: mock`, `email: mock`, `storage: missing` |
+
+---
+
+## البناء المحلي
+
 ```
-npm run build  → نجح
-npm run lint   → 0 errors, 12 warnings
+npm run build  → ✅ نجح
+npm run lint   → ✅ 0 errors, 12 warnings
 ```
 
-### الإنتاج (قبل النشر — `394f2d5`)
+---
 
-| المسار | HTTP |
-|--------|------|
-| `/` | 200 |
-| `/login` | 200 |
-| `/courses` | 200 |
-| `/verify-certificate` | 200 |
-| `/dashboard` | 307 → `/login` |
-| `/admin` | 307 → `/login` |
-| `/instructor` | 307 → `/login` |
-| `/api/health` | 404 (غير منشور بعد) |
+## Git — الحالة
 
-### الأمان — لا blockers للنشر
+| Commit | الوصف |
+|--------|--------|
+| `59360b5` | CI workflow (HEAD على GitHub) |
+| `48ca934` | phase 8 — health, infra dashboard |
+| `394f2d5` | middleware hotfix |
+
+تغييرات محلية غير مرفوعة: `docs/SYSTEM_AUDIT.md` فقط
+
+---
+
+## CI — GitHub Actions
 
 | البند | الحالة |
 |-------|--------|
-| تسريب محتوى الدروس | ✅ مُصلَح (phase 6) |
-| `sessionVersion` + إبطال جلسات | ✅ |
-| Rate limit auth | ✅ (ذاكرة) |
-| Middleware Edge-safe | ✅ |
-| `requireAuth` / `requireRole` في layouts | ✅ |
-| كلمات مرور seed افتراضية | ⚠️ غيّرها بعد النشر |
+| الملف | `.github/workflows/ci.yml` ✅ مرفوع |
+| Workflow | **CI** — active |
+| آخر تشغيل | `ci: add GitHub Actions workflow` |
+| النتيجة | ❌ **failure** |
+| الخطوة الفاشلة | `npx prisma db seed` |
+| خطوات ناجحة | checkout → node → npm ci → migrate deploy |
+
+**التأثير:** لا يؤثر على الإنتاج — Railway منفصل. يحتاج إصلاح seed في CI.
 
 ---
 
-## المرحلة 7 — مكتملة ✅
+## المراحل المكتملة
 
-| المجال | التفاصيل |
-|--------|----------|
-| **Admin** | مستخدمون، أدوار، تسجيلات، بحث |
-| **التعلم** | استئناف آخر درس + `?lesson=` |
-| **محرر دروس** | فيديو/ملف/نص + `/api/upload` |
-| **استرداد** | Stripe + Mock |
-| **البريد** | 10 قوالب |
-| **تقارير** | فلتر تاريخ + CSV |
-| **تخزين** | S3/R2 (`lib/storage`) |
+| المرحلة | المحتوى | الحالة |
+|---------|---------|--------|
+| 6 | أمان، sessionVersion، rate limit | ✅ |
+| 7 | Admin، محرر دروس، بريد، تقارير، S3 | ✅ |
+| 8 | health، لوحة بنية تحتية، rotate script | ✅ منشور |
+| 8 | CI workflow | 🟡 مرفوع — seed يفشل |
+
+---
+
+## جاهزية MVP
+
+| المجال | النسبة | الحالة |
+|--------|--------|--------|
+| رحلة الطالب | ~90% | 🟢 |
+| رحلة المدرب | ~85% | 🟢 |
+| عمليات الإدارة | ~85% | 🟢 |
+| البريد | ~75% | 🟡 |
+| التقارير | ~75% | 🟡 |
+| رفع وسائط | ~60% | 🟡 |
+| **الإنتاج** | ~88% | 🟢 |
+| **إطلاق تجاري** | ~70% | 🟡 Stripe+SMTP+كلمات مرور |
+
+---
+
+## مخاطر مفتوحة
+
+| الأولوية | البند | الإجراء |
+|----------|-------|---------|
+| **P0** | كلمات مرور seed | `npm run rotate-seed-passwords` على Railway |
+| **P0** | دفع Mock | Stripe env + webhook |
+| **P1** | بريد Mock | SMTP + `EMAIL_MOCK=false` |
+| **P1** | CI seed فاشل | إصلاح `prisma/seed.ts` أو CI env |
+| **P2** | S3/R2 | env للرفع الفعلي |
+| **P2** | توكنات مكشوفة | ألغِ PATs القديمة |
 
 ---
 
@@ -108,60 +136,13 @@ npm run lint   → 0 errors, 12 warnings
 
 ---
 
-## جاهزية MVP
-
-| المجال | النسبة | الحالة |
-|--------|--------|--------|
-| رحلة الطالب | ~90% | 🟢 |
-| رحلة المدرب | ~85% | 🟢 |
-| عمليات الإدارة | ~85% | 🟢 (+ لوحة البنية التحتية) |
-| إشعارات البريد | ~75% | 🟡 SMTP غير مفعّل |
-| التقارير | ~75% | 🟡 |
-| رفع وسائط | ~60% | 🟡 env غير مضبوط |
-| **الإنتاج** | ~88% | 🟢 بعد هذا النشر |
-
----
-
-## مخاطر مفتوحة (بعد النشر)
-
-| الأولوية | البند | الإجراء |
-|----------|-------|---------|
-| **P0** | دفع Mock | Stripe env على Railway |
-| **P1** | كلمات مرور seed | `npm run rotate-seed-passwords` |
-| **P1** | بريد Mock | SMTP + `EMAIL_MOCK=false` |
-| **P2** | CI workflow | قد يحتاج PAT بصلاحية `workflow` |
-| **P2** | Rate limit ذاكرة | Redis لاحقاً |
-
----
-
-## خارطة المراحل
-
-### المرحلة 8 — هذا النشر
-- [x] `/api/health` + Railway healthcheck
-- [x] لوحة البنية التحتية
-- [x] `rotate-seed-passwords`
-- [x] CI workflow
-- [ ] **رفع + نشر** ← الآن
-- [ ] تفعيل Stripe + SMTP
-- [ ] تدوير كلمات المرور على الإنتاج
-
-### المرحلة 9
-- [ ] Rate limit Redis
-- [ ] Moyasar/Tap
-- [ ] E2E موسّع + خط Cairo PDF
-
----
-
 ## الخلاصة
 
-**القرار: نعم للرفع والنشر.** لا أخطاء build/lint، الإنتاج الحالي مستقر، والمرحلة 8 تضيف أدوات تشغيل دون كسر التوافق.
-
-**بعد النشر مباشرة:**
-1. تحقق من `/api/health` → `{ status: "ok" }`
-2. `/admin/settings` → بطاقة البنية التحتية
-3. `npm run rotate-seed-passwords` على Railway Shell
+**الإنتاج يعمل بشكل ممتاز** — لا مشاكل في المسارات أو الـ healthcheck.  
+**CI مرفوع** لكن أول تشغيل فشل عند seed (يحتاج إصلاح منفصل).  
+**للإطلاق التجاري:** تدوير كلمات المرور + Stripe + SMTP.
 
 ---
 
-*فحص ما قبل الرفع: 1 يوليو 2026 ~14:05 UTC*  
-*Build: 42 مسار ✅ | Lint: 0 errors ✅ | إنتاج حالي: مستقر ✅*
+*فحص: 1 يوليو 2026 ~16:00 UTC*  
+*Build ✅ | Lint ✅ | إنتاج ✅ | CI ❌ (seed)*
