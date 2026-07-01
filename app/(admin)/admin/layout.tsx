@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 const adminNav: SidebarItem[] = [
   { href: "/admin", label: "لوحة التحكم", icon: "LayoutDashboard" },
   { href: "/admin/users", label: "المستخدمون", icon: "Users" },
+  { href: "/admin/enrollments", label: "التسجيلات", icon: "ClipboardList" },
   { href: "/admin/instructors", label: "المدربون", icon: "GraduationCap" },
   { href: "/admin/courses", label: "الدورات", icon: "BookOpen" },
   { href: "/admin/courses/review", label: "المراجعة", icon: "ClipboardList" },

@@ -1,6 +1,6 @@
 "use server";
 
-import { CourseStatus, OrderStatus } from "@prisma/client";
+import { CourseStatus, OrderStatus, PaymentStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { orderSchema } from "@/lib/validation/schemas";
@@ -17,10 +17,85 @@ import {
   fulfillPaidOrder,
   recordFailedPayment,
 } from "@/lib/services/fulfill-order";
+import { sendPaymentFailedEmail, sendRefundEmail } from "@/lib/email";
 import { failure, success, type ActionResult } from "@/lib/actions/types";
 import { UserRole } from "@prisma/client";
 import { toNumber } from "@/lib/utils";
 import { createAuditLog } from "@/lib/audit";
+
+async function executeOrderRefund(
+  orderId: string,
+  actorUserId: string,
+  auditAction: "REFUND_REQUESTED" | "ADMIN_REFUND",
+): Promise<ActionResult<{ message: string }>> {
+  const order = await db.order.findUnique({
+    where: { id: orderId },
+    include: {
+      course: { select: { title: true } },
+      student: { select: { email: true, name: true } },
+      enrollments: true,
+      payments: {
+        where: { status: PaymentStatus.COMPLETED },
+        orderBy: { paidAt: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  if (!order) return failure("الطلب غير موجود");
+  if (order.status === OrderStatus.REFUNDED) {
+    return failure("تم استرداد هذا الطلب مسبقاً");
+  }
+  if (order.status !== OrderStatus.PAID) {
+    return failure("لا يمكن استرداد هذا الطلب");
+  }
+
+  const amount = toNumber(order.amount);
+  const payment = order.payments[0];
+
+  if (payment?.providerRef) {
+    const refund = await refundProviderPayment(payment.providerRef, amount);
+    if (!refund.success) {
+      return failure(refund.error ?? "فشل استرداد بوابة الدفع");
+    }
+    await db.payment.update({
+      where: { id: payment.id },
+      data: { status: PaymentStatus.REFUNDED },
+    });
+  }
+
+  await db.order.update({
+    where: { id: orderId },
+    data: { status: OrderStatus.REFUNDED },
+  });
+
+  for (const enrollment of order.enrollments) {
+    if (enrollment.status !== "CANCELLED") {
+      await db.enrollment.update({
+        where: { id: enrollment.id },
+        data: { status: "CANCELLED" },
+      });
+    }
+  }
+
+  await createAuditLog({
+    userId: actorUserId,
+    action: auditAction,
+    entityType: "Order",
+    entityId: orderId,
+  });
+
+  await sendRefundEmail(
+    order.student.email,
+    order.student.name,
+    order.course.title,
+    amount,
+  );
+
+  revalidatePath("/dashboard/orders");
+  revalidatePath("/admin/orders");
+  return success({ message: "تم استرداد المبلغ." });
+}
 
 export async function createOrder(
   formData: FormData,
@@ -154,6 +229,12 @@ export async function processPayment(
 
   if (!checkout.payment.success) {
     await recordFailedPayment(orderId, amount, checkout.payment.error);
+    await sendPaymentFailedEmail(
+      user.email,
+      user.name,
+      order.course.title,
+      checkout.payment.error,
+    );
     return failure(checkout.payment.error);
   }
 
@@ -235,65 +316,14 @@ export async function requestRefund(
     }
   }
 
-  await db.order.update({
-    where: { id: orderId },
-    data: { status: OrderStatus.REFUNDED },
-  });
-
-  if (enrollment) {
-    await db.enrollment.update({
-      where: { id: enrollment.id },
-      data: { status: "CANCELLED" },
-    });
-  }
-
-  await createAuditLog({
-    userId: user.id,
-    action: "REFUND_REQUESTED",
-    entityType: "Order",
-    entityId: orderId,
-  });
-
-  revalidatePath("/dashboard/orders");
-  return success({ message: "تم تقديم طلب الاسترداد." });
+  return executeOrderRefund(orderId, user.id, "REFUND_REQUESTED");
 }
 
 export async function adminRefund(
   orderId: string,
 ): Promise<ActionResult<{ message: string }>> {
   const user = await requireRole(UserRole.ADMIN);
-
-  const order = await db.order.findUnique({
-    where: { id: orderId },
-    include: { enrollments: true },
-  });
-
-  if (!order) return failure("الطلب غير موجود");
-  if (order.status === OrderStatus.REFUNDED) {
-    return failure("تم استرداد هذا الطلب مسبقاً");
-  }
-
-  await db.order.update({
-    where: { id: orderId },
-    data: { status: OrderStatus.REFUNDED },
-  });
-
-  for (const enrollment of order.enrollments) {
-    await db.enrollment.update({
-      where: { id: enrollment.id },
-      data: { status: "CANCELLED" },
-    });
-  }
-
-  await createAuditLog({
-    userId: user.id,
-    action: "ADMIN_REFUND",
-    entityType: "Order",
-    entityId: orderId,
-  });
-
-  revalidatePath("/admin/orders");
-  return success({ message: "تم استرداد المبلغ." });
+  return executeOrderRefund(orderId, user.id, "ADMIN_REFUND");
 }
 
 export async function getMyOrders() {

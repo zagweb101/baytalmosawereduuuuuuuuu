@@ -8,6 +8,7 @@ import {
   deleteSection,
   deleteLesson,
   submitForReview,
+  updateLesson,
 } from "@/lib/actions/courses";
 import { createQuiz } from "@/lib/actions/quizzes";
 import { Button } from "@/components/ui/button";
@@ -18,16 +19,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CourseStatusBadge } from "@/components/shared/status-badge";
 import type { CourseStatus } from "@prisma/client";
 
+type Lesson = {
+  id: string;
+  title: string;
+  type: string;
+  order: number;
+  content: string | null;
+  videoRef: string | null;
+  fileRef: string | null;
+  isFreePreview: boolean;
+  isPublished: boolean;
+  durationMinutes: number | null;
+};
+
 type Section = {
   id: string;
   title: string;
   order: number;
-  lessons: {
-    id: string;
-    title: string;
-    type: string;
-    order: number;
-  }[];
+  lessons: Lesson[];
 };
 
 type EditCourseClientProps = {
@@ -49,6 +58,150 @@ type EditCourseClientProps = {
   categories: { id: string; name: string }[];
   hasQuiz: boolean;
 };
+
+function LessonEditor({
+  lesson,
+  onSaved,
+}: {
+  lesson: Lesson;
+  onSaved: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  const uploadMedia = async (file: File, folder: string, field: string, form: HTMLFormElement) => {
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      fd.set("folder", folder);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (data.url) {
+        const input = form.elements.namedItem(field) as HTMLInputElement;
+        if (input) input.value = data.url;
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="border border-border rounded-lg p-3 space-y-2">
+      <button
+        type="button"
+        className="w-full text-start text-sm font-medium flex justify-between"
+        onClick={() => setOpen(!open)}
+      >
+        <span>{lesson.title}</span>
+        <span className="text-muted text-xs">{lesson.type}</span>
+      </button>
+      {open && (
+        <form
+          className="space-y-3 pt-2 border-t border-border"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            fd.set("isFreePreview", (e.currentTarget.elements.namedItem("isFreePreview") as HTMLInputElement).checked ? "true" : "false");
+            fd.set("isPublished", (e.currentTarget.elements.namedItem("isPublished") as HTMLInputElement).checked ? "true" : "false");
+            startTransition(async () => {
+              await updateLesson(lesson.id, fd);
+              onSaved();
+            });
+          }}
+        >
+          <div className="space-y-1">
+            <Label>العنوان</Label>
+            <Input name="title" defaultValue={lesson.title} required />
+          </div>
+          <div className="space-y-1">
+            <Label>النوع</Label>
+            <select
+              name="type"
+              defaultValue={lesson.type}
+              className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm"
+            >
+              <option value="VIDEO">فيديو</option>
+              <option value="TEXT">نص</option>
+              <option value="FILE">ملف</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label>رابط الفيديو (YouTube أو URL)</Label>
+            <Input name="videoRef" defaultValue={lesson.videoRef ?? ""} dir="ltr" />
+            <input
+              type="file"
+              accept="video/*"
+              className="text-xs"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) uploadMedia(file, "videos", "videoRef", e.currentTarget.form!);
+              }}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>رابط الملف</Label>
+            <Input name="fileRef" defaultValue={lesson.fileRef ?? ""} dir="ltr" />
+            <input
+              type="file"
+              className="text-xs"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) uploadMedia(file, "files", "fileRef", e.currentTarget.form!);
+              }}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>المحتوى النصي</Label>
+            <textarea
+              name="content"
+              defaultValue={lesson.content ?? ""}
+              rows={4}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>المدة (دقائق)</Label>
+              <Input
+                name="durationMinutes"
+                type="number"
+                min={0}
+                defaultValue={lesson.durationMinutes ?? ""}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>الترتيب</Label>
+              <Input name="order" type="number" min={0} defaultValue={lesson.order} />
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-4 text-sm">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="isFreePreview"
+                defaultChecked={lesson.isFreePreview}
+              />
+              معاينة مجانية
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="isPublished"
+                defaultChecked={lesson.isPublished}
+              />
+              منشور
+            </label>
+          </div>
+          <Button type="submit" size="sm" loading={pending || uploading}>
+            حفظ الدرس
+          </Button>
+        </form>
+      )}
+    </div>
+  );
+}
 
 export function EditCourseClient({ course, categories, hasQuiz }: EditCourseClientProps) {
   const router = useRouter();
@@ -142,11 +295,17 @@ export function EditCourseClient({ course, categories, hasQuiz }: EditCourseClie
               </CardHeader>
               <CardContent className="space-y-2">
                 {section.lessons.map((lesson) => (
-                  <div key={lesson.id} className="flex items-center justify-between text-sm">
-                    <span>{lesson.title}</span>
+                  <div key={lesson.id} className="flex gap-2 items-start">
+                    <div className="flex-1">
+                      <LessonEditor
+                        lesson={lesson}
+                        onSaved={() => router.refresh()}
+                      />
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="shrink-0 mt-3"
                       onClick={() =>
                         startTransition(async () => {
                           await deleteLesson(lesson.id);
@@ -166,6 +325,7 @@ export function EditCourseClient({ course, categories, hasQuiz }: EditCourseClie
                     fd.set("sectionId", section.id);
                     fd.set("type", "VIDEO");
                     fd.set("order", String(section.lessons.length));
+                    fd.set("isPublished", "true");
                     startTransition(async () => {
                       await createLesson(fd);
                       router.refresh();

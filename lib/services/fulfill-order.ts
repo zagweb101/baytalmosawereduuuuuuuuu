@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { createEnrollmentAfterPayment } from "@/lib/services/enrollment-service";
 import { createNotification } from "@/lib/notifications/create";
 import { createAuditLog } from "@/lib/audit";
+import { sendPaymentSuccessEmail } from "@/lib/email";
 import { toNumber } from "@/lib/utils";
 
 export async function fulfillPaidOrder(
@@ -13,7 +14,7 @@ export async function fulfillPaidOrder(
 ): Promise<{ success: true } | { success: false; error: string }> {
   const order = await db.order.findUnique({
     where: { id: orderId },
-    include: { course: true },
+    include: { course: true, student: { select: { email: true, name: true } } },
   });
 
   if (!order) {
@@ -53,6 +54,13 @@ export async function fulfillPaidOrder(
   }
 
   await createEnrollmentAfterPayment(orderId);
+
+  await sendPaymentSuccessEmail(
+    order.student.email,
+    order.student.name,
+    order.course.title,
+    amount,
+  );
 
   await createNotification({
     userId: order.studentId,

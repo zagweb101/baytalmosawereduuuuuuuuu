@@ -53,6 +53,16 @@ export default async function StudentDashboardPage() {
                 totalLessons > 0
                   ? Math.round((completed / totalLessons) * 100)
                   : 0;
+              const lastViewed = enrollment.progress
+                .filter((p) => p.lastViewedAt)
+                .sort(
+                  (a, b) =>
+                    (b.lastViewedAt?.getTime() ?? 0) -
+                    (a.lastViewedAt?.getTime() ?? 0),
+                )[0];
+              const learnHref = lastViewed
+                ? `/dashboard/courses/${enrollment.courseId}/learn?lesson=${lastViewed.lessonId}`
+                : `/dashboard/courses/${enrollment.courseId}/learn`;
               return (
               <Card key={enrollment.id}>
                 <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -63,7 +73,7 @@ export default async function StudentDashboardPage() {
                       className="mt-2 max-w-xs"
                     />
                   </div>
-                  <Link href={`/dashboard/courses/${enrollment.courseId}/learn`}>
+                  <Link href={learnHref}>
                     <Button size="sm">متابعة</Button>
                   </Link>
                 </CardContent>

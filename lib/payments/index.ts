@@ -8,7 +8,11 @@ import {
   processMockPayment,
   refundMockPayment,
 } from "@/lib/payments/mock-provider";
-import { createStripeCheckout, isStripeEnabled } from "@/lib/payments/stripe-provider";
+import {
+  createStripeCheckout,
+  isStripeEnabled,
+  refundStripePayment,
+} from "@/lib/payments/stripe-provider";
 
 export function getPaymentProviderName(): PaymentProviderName {
   return isStripeEnabled() ? "stripe" : "mock";
@@ -39,7 +43,16 @@ export async function processProviderPayment(
 
 export async function refundProviderPayment(
   providerRef: string,
+  amount?: number,
 ): Promise<RefundResult> {
+  if (isStripeEnabled()) {
+    const result = await refundStripePayment(providerRef, amount);
+    if (!result.success) {
+      return { success: false, error: result.error ?? "فشل الاسترداد" };
+    }
+    return { success: true, refundRef: result.refundRef! };
+  }
+
   const result = await refundMockPayment(providerRef);
   if (!result.success) {
     return { success: false, error: result.error ?? "فشل الاسترداد" };

@@ -9,11 +9,14 @@ import { CourseReviewForm } from "@/components/shared/course-review-form";
 
 export default async function LearnPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ courseId: string }>;
+  searchParams: Promise<{ lesson?: string }>;
 }) {
   const user = await requireAuth();
   const { courseId } = await params;
+  const { lesson: lessonParam } = await searchParams;
 
   const progress = await getProgress(courseId);
   if (!progress) redirect("/dashboard/my-courses");
@@ -46,6 +49,17 @@ export default async function LearnPage({
   const userReview = await getUserReview(courseId);
   const quiz = course.quizzes[0] ?? null;
 
+  const lastLessonId = progress.lastViewed?.lessonId;
+  const publishedIds = new Set(
+    course.sections.flatMap((s) => s.lessons.map((l) => l.id)),
+  );
+  const initialLessonId =
+    lessonParam && publishedIds.has(lessonParam)
+      ? lessonParam
+      : lastLessonId && publishedIds.has(lastLessonId)
+        ? lastLessonId
+        : undefined;
+
   return (
     <>
       <LearnPageClient
@@ -56,6 +70,7 @@ export default async function LearnPage({
         percent={progress.percent}
         canIssueCertificate={canIssueCertificate}
         quiz={quiz ? { id: quiz.id, title: quiz.title } : null}
+        initialLessonId={initialLessonId}
       />
       <div className="container mx-auto px-4 pb-12 max-w-3xl lg:ms-80">
         <CourseReviewForm

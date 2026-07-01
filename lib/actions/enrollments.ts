@@ -6,7 +6,8 @@ import {
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth/session";
+import { UserRole } from "@prisma/client";
+import { requireAuth, requireRole } from "@/lib/auth/session";
 import { isEnrolled } from "@/lib/permissions";
 import { sendEnrollmentEmail } from "@/lib/email";
 import { createAuditLog } from "@/lib/audit";
@@ -235,5 +236,50 @@ export async function getContinueLearning() {
   return enrollments
     .filter((e) => e.progress.some((p) => p.lastViewedAt))
     .slice(0, 3);
+}
+
+export async function getAdminEnrollments() {
+  await requireRole(UserRole.ADMIN);
+
+  return db.enrollment.findMany({
+    include: {
+      student: { select: { id: true, name: true, email: true } },
+      course: { select: { id: true, title: true, slug: true } },
+    },
+    orderBy: { enrolledAt: "desc" },
+    take: 100,
+  });
+}
+
+export async function cancelEnrollment(
+  enrollmentId: string,
+): Promise<ActionResult<{ message: string }>> {
+  const admin = await requireRole(UserRole.ADMIN);
+
+  const enrollment = await db.enrollment.findUnique({
+    where: { id: enrollmentId },
+    include: { course: { select: { slug: true } } },
+  });
+
+  if (!enrollment) return failure("التسجيل غير موجود");
+  if (enrollment.status === EnrollmentStatus.CANCELLED) {
+    return failure("التسجيل ملغى مسبقاً");
+  }
+
+  await db.enrollment.update({
+    where: { id: enrollmentId },
+    data: { status: EnrollmentStatus.CANCELLED },
+  });
+
+  await createAuditLog({
+    userId: admin.id,
+    action: "ENROLLMENT_CANCELLED",
+    entityType: "Enrollment",
+    entityId: enrollmentId,
+  });
+
+  revalidatePath("/admin/enrollments");
+  revalidatePath(`/courses/${enrollment.course.slug}`);
+  return success({ message: "تم إلغاء التسجيل." });
 }
 

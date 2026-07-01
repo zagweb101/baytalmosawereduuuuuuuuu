@@ -9,6 +9,7 @@ import { createAuditLog } from "@/lib/audit";
 import {
   sendVerificationEmail,
   sendEmail,
+  sendWelcomeEmail,
 } from "@/lib/email";
 import {
   createVerificationToken,
@@ -112,6 +113,11 @@ export async function verifyEmail(
     entityType: "User",
     entityId: userId,
   });
+
+  const verifiedUser = await db.user.findUnique({ where: { id: userId } });
+  if (verifiedUser) {
+    await sendWelcomeEmail(verifiedUser.email, verifiedUser.name);
+  }
 
   return success({ message: "تم تفعيل حسابك بنجاح. يمكنك تسجيل الدخول الآن." });
 }

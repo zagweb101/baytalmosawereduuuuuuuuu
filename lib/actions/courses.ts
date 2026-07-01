@@ -13,6 +13,10 @@ import { canEditCourse, canPreviewLesson, isEnrolled } from "@/lib/permissions";
 import { getPreviewLessonIdsForCourse } from "@/lib/preview";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createAuditLog } from "@/lib/audit";
+import {
+  sendCourseApprovedEmail,
+  sendCourseRejectedEmail,
+} from "@/lib/email";
 import { failure, success, type ActionResult } from "@/lib/actions/types";
 import { z } from "zod";
 
@@ -183,7 +187,12 @@ export async function publishCourse(
 ): Promise<ActionResult<{ message: string }>> {
   const user = await requireRole(UserRole.ADMIN);
 
-  const course = await db.course.findUnique({ where: { id: courseId } });
+  const course = await db.course.findUnique({
+    where: { id: courseId },
+    include: {
+      instructor: { select: { email: true, name: true } },
+    },
+  });
   if (!course) return failure("الدورة غير موجودة");
 
   if (course.status !== CourseStatus.UNDER_REVIEW) {
@@ -194,6 +203,13 @@ export async function publishCourse(
     where: { id: courseId },
     data: { status: CourseStatus.PUBLISHED, publishedAt: new Date() },
   });
+
+  await sendCourseApprovedEmail(
+    course.instructor.email,
+    course.instructor.name,
+    course.title,
+    course.slug,
+  );
 
   await createAuditLog({
     userId: user.id,
@@ -217,7 +233,10 @@ export async function rejectCourse(
     return failure("يرجى ذكر سبب الرفض");
   }
 
-  const course = await db.course.findUnique({ where: { id: courseId } });
+  const course = await db.course.findUnique({
+    where: { id: courseId },
+    include: { instructor: { select: { email: true, name: true } } },
+  });
   if (!course || course.status !== CourseStatus.UNDER_REVIEW) {
     return failure("الدورة غير متاحة للرفض");
   }
@@ -226,6 +245,13 @@ export async function rejectCourse(
     where: { id: courseId },
     data: { status: CourseStatus.REJECTED, rejectionReason: reason },
   });
+
+  await sendCourseRejectedEmail(
+    course.instructor.email,
+    course.instructor.name,
+    course.title,
+    reason,
+  );
 
   await createAuditLog({
     userId: user.id,

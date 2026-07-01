@@ -1,11 +1,14 @@
 "use server";
 
+import bcrypt from "bcryptjs";
 import { UserRole, UserStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/session";
 import { createAuditLog } from "@/lib/audit";
 import { invalidateUserSessions } from "@/lib/auth/session-invalidation";
+import { sendInstructorApprovedEmail } from "@/lib/email";
 import { failure, success, type ActionResult } from "@/lib/actions/types";
 
 export async function manageUsers(filters?: {
@@ -116,6 +119,10 @@ export async function approveInstructor(
   });
 
   revalidatePath("/admin/instructors");
+  const instructor = await db.user.findUnique({ where: { id: userId } });
+  if (instructor) {
+    await sendInstructorApprovedEmail(instructor.email, instructor.name);
+  }
   return success({ message: "تمت الموافقة على المدرب." });
 }
 
@@ -136,4 +143,94 @@ export async function getAuditLogs(limit = 50) {
     orderBy: { createdAt: "desc" },
     take: limit,
   });
+}
+
+const createUserSchema = z.object({
+  name: z.string().min(2).max(100),
+  email: z.string().email(),
+  password: z.string().min(8),
+  role: z.enum(["STUDENT", "INSTRUCTOR", "ADMIN"]),
+});
+
+export async function createUser(
+  formData: FormData,
+): Promise<ActionResult<{ message: string }>> {
+  const admin = await requireRole(UserRole.ADMIN);
+
+  const parsed = createUserSchema.safeParse({
+    name: formData.get("name"),
+    email: String(formData.get("email") ?? "").toLowerCase(),
+    password: formData.get("password"),
+    role: formData.get("role"),
+  });
+
+  if (!parsed.success) {
+    return failure(parsed.error.issues[0]?.message ?? "بيانات غير صالحة");
+  }
+
+  const { name, email, password, role } = parsed.data;
+
+  const existing = await db.user.findUnique({ where: { email } });
+  if (existing) {
+    return failure("البريد الإلكتروني مستخدم بالفعل");
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  const user = await db.user.create({
+    data: {
+      name,
+      email,
+      passwordHash,
+      role,
+      status: UserStatus.ACTIVE,
+      emailVerified: new Date(),
+    },
+  });
+
+  await createAuditLog({
+    userId: admin.id,
+    action: "USER_CREATED",
+    entityType: "User",
+    entityId: user.id,
+    metadata: { role },
+  });
+
+  revalidatePath("/admin/users");
+  return success({ message: "تم إنشاء المستخدم." });
+}
+
+export async function changeUserRole(
+  userId: string,
+  role: UserRole,
+): Promise<ActionResult<{ message: string }>> {
+  const admin = await requireRole(UserRole.ADMIN);
+
+  const target = await db.user.findUnique({ where: { id: userId } });
+  if (!target) return failure("المستخدم غير موجود");
+  if (target.id === admin.id) return failure("لا يمكن تغيير دورك");
+  if (target.role === UserRole.ADMIN && role !== UserRole.ADMIN) {
+    const adminCount = await db.user.count({ where: { role: UserRole.ADMIN } });
+    if (adminCount <= 1) {
+      return failure("يجب أن يبقى مدير واحد على الأقل");
+    }
+  }
+
+  await db.user.update({
+    where: { id: userId },
+    data: { role },
+  });
+
+  await invalidateUserSessions(userId);
+
+  await createAuditLog({
+    userId: admin.id,
+    action: "USER_ROLE_CHANGED",
+    entityType: "User",
+    entityId: userId,
+    metadata: { from: target.role, to: role },
+  });
+
+  revalidatePath("/admin/users");
+  return success({ message: "تم تحديث الدور." });
 }

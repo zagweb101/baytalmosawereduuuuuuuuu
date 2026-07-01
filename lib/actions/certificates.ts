@@ -9,6 +9,7 @@ import { getProgress } from "@/lib/actions/enrollments";
 import { hasPassedQuiz } from "@/lib/actions/quizzes";
 import { checkVerifyRateLimit } from "@/lib/certificates/rate-limit";
 import { createAuditLog } from "@/lib/audit";
+import { sendCertificateIssuedEmail } from "@/lib/email";
 import { failure, success, type ActionResult } from "@/lib/actions/types";
 
 function generateCertificateNumber(): string {
@@ -47,7 +48,15 @@ export async function issueCertificate(
       courseId,
       enrollmentId: progress.enrollment.id,
     },
+    include: { course: { select: { title: true } } },
   });
+
+  await sendCertificateIssuedEmail(
+    user.email,
+    user.name,
+    certificate.course.title,
+    certificate.certificateNumber,
+  );
 
   await createAuditLog({
     userId: user.id,
