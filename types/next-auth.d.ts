@@ -8,6 +8,7 @@ declare module "next-auth" {
       role: UserRole;
       status: UserStatus;
     } & DefaultSession["user"];
+    sessionId?: string;
   }
 
   interface User {
@@ -23,5 +24,8 @@ declare module "next-auth/jwt" {
     role: UserRole;
     status: UserStatus;
     statusRefreshedAt?: number;
+    sessionVersion?: number;
+    sessionId?: string;
+    error?: "SessionRevoked";
   }
 }

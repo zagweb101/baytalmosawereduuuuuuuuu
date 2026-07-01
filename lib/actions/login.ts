@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { AuthError } from "next-auth";
-import { signIn } from "@/lib/auth/auth";
+import { signIn, unstable_update } from "@/lib/auth/auth";
 import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit";
 import { trackUserSession } from "@/lib/sessions/track";
 
@@ -32,7 +32,10 @@ export async function loginUser(
       redirect: false,
     });
     resetRateLimit(rateKey);
-    await trackUserSession();
+    const sessionId = await trackUserSession();
+    if (sessionId) {
+      await unstable_update({ sessionId } as { sessionId: string });
+    }
     return { success: true };
   } catch (error) {
     if (error instanceof AuthError) {

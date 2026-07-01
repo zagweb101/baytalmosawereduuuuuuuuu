@@ -16,6 +16,7 @@ import {
   consumeToken,
 } from "@/lib/auth/verification-tokens";
 import { requireAuth } from "@/lib/auth/session";
+import { invalidateUserSessions } from "@/lib/auth/session-invalidation";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { failure, success, type ActionResult } from "@/lib/actions/types";
 
@@ -85,6 +86,13 @@ export async function verifyEmail(
     return failure("رمز التحقق مطلوب");
   }
 
+  const headersList = await headers();
+  const ip =
+    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (!checkRateLimit(`verify-email:${ip}`, 10, 15 * 60 * 1000)) {
+    return failure("تجاوزت عدد المحاولات. حاول لاحقاً.");
+  }
+
   const userId = await consumeToken(token, "verify");
   if (!userId) {
     return failure("رمز التحقق غير صالح أو منتهي الصلاحية");
@@ -152,6 +160,13 @@ export async function forgotPassword(
     return failure("البريد الإلكتروني مطلوب");
   }
 
+  const headersList = await headers();
+  const ip =
+    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (!checkRateLimit(`forgot-password:${ip}`, 5, 60 * 60 * 1000)) {
+    return failure("تجاوزت عدد المحاولات. حاول لاحقاً.");
+  }
+
   const user = await db.user.findUnique({ where: { email } });
 
   if (user) {
@@ -183,6 +198,13 @@ export async function resetPassword(
     return failure("كلمتا المرور غير متطابقتين");
   }
 
+  const headersList = await headers();
+  const ip =
+    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (!checkRateLimit(`reset-password:${ip}`, 10, 60 * 60 * 1000)) {
+    return failure("تجاوزت عدد المحاولات. حاول لاحقاً.");
+  }
+
   const userId = await consumeToken(token, "reset");
   if (!userId) {
     return failure("رمز إعادة التعيين غير صالح أو منتهي");
@@ -193,6 +215,8 @@ export async function resetPassword(
     where: { id: userId },
     data: { passwordHash },
   });
+
+  await invalidateUserSessions(userId);
 
   return success({ message: "تم تغيير كلمة المرور بنجاح." });
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { quizSchema } from "@/lib/validation/schemas";
+import { UserRole } from "@prisma/client";
 import { requireAuth } from "@/lib/auth/session";
 import { canEditCourse, isEnrolled } from "@/lib/permissions";
 import { failure, success, type ActionResult } from "@/lib/actions/types";
@@ -33,6 +34,10 @@ export async function createQuiz(
 
   if (!parsed.success) {
     return failure(parsed.error.issues[0]?.message ?? "بيانات غير صالحة");
+  }
+
+  if (!parsed.data.courseId) {
+    return failure("يجب ربط الاختبار بدورة");
   }
 
   if (parsed.data.courseId) {
@@ -120,6 +125,11 @@ export async function submitAttempt(
 }
 
 export async function hasPassedQuiz(userId: string, courseId: string) {
+  const user = await requireAuth();
+  if (user.id !== userId && user.role !== UserRole.ADMIN) {
+    return false;
+  }
+
   const quiz = await db.quiz.findFirst({ where: { courseId } });
   if (!quiz) return true;
 

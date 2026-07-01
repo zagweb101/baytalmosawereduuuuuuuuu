@@ -1,7 +1,6 @@
-import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
 import type { UserRole, UserStatus } from "@prisma/client";
-import { authConfig } from "@/lib/auth/auth.config";
+import { auth } from "@/lib/auth/auth";
 
 type RouteAccess = {
   prefix: string;
@@ -15,8 +14,6 @@ const PROTECTED_ROUTES: RouteAccess[] = [
 ];
 
 const BLOCKED_STATUSES: UserStatus[] = ["SUSPENDED", "PENDING_VERIFICATION"];
-
-const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;

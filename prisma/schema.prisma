@@ -95,7 +95,8 @@ model User {
   bio           String?
   image         String?
   emailVerified DateTime?
-  createdAt     DateTime   @default(now())
+  sessionVersion  Int        @default(0)
+  createdAt       DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
   courses            Course[]       @relation("InstructorCourses")

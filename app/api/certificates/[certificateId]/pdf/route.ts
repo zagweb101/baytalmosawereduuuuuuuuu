@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth/auth";
+import { UserRole } from "@prisma/client";
 import { db } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth/session";
 import { generateCertificatePdf } from "@/lib/certificates/pdf";
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ certificateId: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const user = await getCurrentUser();
+  if (!user) {
     return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
   }
 
@@ -26,8 +27,8 @@ export async function GET(
     return NextResponse.json({ error: "غير موجود" }, { status: 404 });
   }
 
-  const isOwner = certificate.userId === session.user.id;
-  const isAdmin = session.user.role === "ADMIN";
+  const isOwner = certificate.userId === user.id;
+  const isAdmin = user.role === UserRole.ADMIN;
 
   if (!isOwner && !isAdmin) {
     return NextResponse.json({ error: "غير مصرح" }, { status: 403 });

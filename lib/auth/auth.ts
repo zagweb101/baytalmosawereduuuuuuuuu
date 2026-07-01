@@ -12,15 +12,39 @@ const BLOCKED_STATUSES: UserStatus[] = [
   UserStatus.PENDING_VERIFICATION,
 ];
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+function revokeToken<T extends Record<string, unknown>>(token: T) {
+  return { ...token, error: "SessionRevoked" as const };
+}
+
+export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
   ...authConfig,
   callbacks: {
     ...authConfig.callbacks,
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      if (token.error === "SessionRevoked") {
+        return token;
+      }
+
+      if (trigger === "update" && session?.sessionId) {
+        token.sessionId = session.sessionId as string;
+        return token;
+      }
+
       if (user) {
+        const dbUser = await db.user.findUnique({
+          where: { id: user.id },
+          select: { role: true, status: true, sessionVersion: true },
+        });
+
+        if (!dbUser || BLOCKED_STATUSES.includes(dbUser.status)) {
+          return revokeToken(token);
+        }
+
         token.id = user.id;
-        token.role = user.role;
-        token.status = user.status;
+        token.role = dbUser.role;
+        token.status = dbUser.status;
+        token.sessionVersion = dbUser.sessionVersion;
+        token.statusRefreshedAt = Date.now();
         return token;
       }
 
@@ -31,12 +55,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (shouldRefresh) {
           const dbUser = await db.user.findUnique({
             where: { id: token.id as string },
-            select: { role: true, status: true },
+            select: { role: true, status: true, sessionVersion: true },
           });
-          if (dbUser) {
-            token.role = dbUser.role;
-            token.status = dbUser.status;
+
+          if (!dbUser) {
+            return revokeToken(token);
           }
+
+          if (
+            token.sessionVersion !== undefined &&
+            dbUser.sessionVersion !== token.sessionVersion
+          ) {
+            return revokeToken(token);
+          }
+
+          if (BLOCKED_STATUSES.includes(dbUser.status)) {
+            return revokeToken(token);
+          }
+
+          if (token.sessionId) {
+            const activeSession = await db.userSession.findUnique({
+              where: { id: token.sessionId as string },
+              select: { userId: true },
+            });
+            if (!activeSession || activeSession.userId !== token.id) {
+              return revokeToken(token);
+            }
+          }
+
+          token.role = dbUser.role;
+          token.status = dbUser.status;
+          token.sessionVersion = dbUser.sessionVersion;
           token.statusRefreshedAt = Date.now();
         }
       }

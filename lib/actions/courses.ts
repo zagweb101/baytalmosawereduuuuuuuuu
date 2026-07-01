@@ -9,7 +9,9 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { courseSchema, lessonSchema } from "@/lib/validation/schemas";
 import { requireAuth, requireRole } from "@/lib/auth/session";
-import { canEditCourse } from "@/lib/permissions";
+import { canEditCourse, canPreviewLesson, isEnrolled } from "@/lib/permissions";
+import { getPreviewLessonIdsForCourse } from "@/lib/preview";
+import { getCurrentUser } from "@/lib/auth/session";
 import { createAuditLog } from "@/lib/audit";
 import { failure, success, type ActionResult } from "@/lib/actions/types";
 import { z } from "zod";
@@ -500,6 +502,14 @@ export async function getCourseBySlug(slug: string) {
           lessons: {
             where: { isPublished: true },
             orderBy: { order: "asc" },
+            select: {
+              id: true,
+              title: true,
+              order: true,
+              isFreePreview: true,
+              type: true,
+              durationMinutes: true,
+            },
           },
         },
       },
@@ -508,8 +518,101 @@ export async function getCourseBySlug(slug: string) {
         orderBy: { createdAt: "desc" },
         take: 10,
       },
-      quizzes: true,
+      quizzes: {
+        select: {
+          id: true,
+          title: true,
+          passingScore: true,
+          timeLimitMinutes: true,
+          courseId: true,
+        },
+      },
       _count: { select: { enrollments: true } },
     },
   });
+}
+
+/** محتوى درس المعاينة — بعد التحقق من الصلاحية فقط */
+export async function getPreviewLessonContent(slug: string, lessonId: string) {
+  const course = await db.course.findUnique({
+    where: { slug },
+    select: {
+      id: true,
+      slug: true,
+      status: true,
+      price: true,
+      title: true,
+      instructorId: true,
+      sections: {
+        orderBy: { order: "asc" },
+        select: {
+          order: true,
+          lessons: {
+            where: { isPublished: true },
+            orderBy: { order: "asc" },
+            select: {
+              id: true,
+              order: true,
+              isFreePreview: true,
+              title: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!course || course.status !== CourseStatus.PUBLISHED) {
+    return null;
+  }
+
+  const user = await getCurrentUser();
+  if (user && (await isEnrolled(user.id, course.id))) {
+    return null;
+  }
+
+  const sections = course.sections.map((s) => ({
+    order: s.order,
+    lessons: s.lessons.map((l) => ({
+      id: l.id,
+      order: l.order,
+      isFreePreview: l.isFreePreview,
+    })),
+  }));
+
+  const allowed = await canPreviewLesson(user, course, lessonId, sections);
+  if (!allowed) {
+    return null;
+  }
+
+  const previewIds = await getPreviewLessonIdsForCourse(sections);
+  if (!previewIds.has(lessonId)) {
+    return null;
+  }
+
+  const lesson = await db.lesson.findFirst({
+    where: {
+      id: lessonId,
+      isPublished: true,
+      section: { courseId: course.id },
+    },
+    select: {
+      id: true,
+      title: true,
+      type: true,
+      videoRef: true,
+      content: true,
+      fileRef: true,
+    },
+  });
+
+  if (!lesson) {
+    return null;
+  }
+
+  const previewLessons = course.sections
+    .flatMap((s) => s.lessons)
+    .filter((l) => previewIds.has(l.id));
+
+  return { course, lesson, previewLessons };
 }

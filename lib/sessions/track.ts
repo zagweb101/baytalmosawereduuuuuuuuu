@@ -14,9 +14,10 @@ function parseDeviceType(userAgent: string | null): string {
   return "حاسوب";
 }
 
-export async function trackUserSession(): Promise<void> {
+/** يسجّل جلسة الجهاز ويربطها بـ JWT عبر unstable_update من loginUser */
+export async function trackUserSession(): Promise<string | null> {
   const session = await auth();
-  if (!session?.user?.id) return;
+  if (!session?.user?.id) return null;
 
   const headersList = await headers();
   const ip =
@@ -38,10 +39,10 @@ export async function trackUserSession(): Promise<void> {
       where: { id: recent.id },
       data: { lastActiveAt: new Date() },
     });
-    return;
+    return recent.id;
   }
 
-  await db.userSession.create({
+  const created = await db.userSession.create({
     data: {
       userId: session.user.id,
       ipAddress: ip,
@@ -49,6 +50,8 @@ export async function trackUserSession(): Promise<void> {
       deviceType: parseDeviceType(userAgent),
     },
   });
+
+  return created.id;
 }
 
 export async function touchUserSession(userId: string): Promise<void> {

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/session";
 import { createAuditLog } from "@/lib/audit";
+import { invalidateUserSessions } from "@/lib/auth/session-invalidation";
 import { failure, success, type ActionResult } from "@/lib/actions/types";
 
 export async function manageUsers(filters?: {
@@ -57,6 +58,8 @@ export async function suspendUser(
     where: { id: userId },
     data: { status: UserStatus.SUSPENDED },
   });
+
+  await invalidateUserSessions(userId);
 
   await createAuditLog({
     userId: admin.id,

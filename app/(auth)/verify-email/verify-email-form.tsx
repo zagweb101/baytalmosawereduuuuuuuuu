@@ -12,16 +12,16 @@ import { Button } from "@/components/ui/button";
 export default function VerifyEmailForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
-  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState<"loading" | "success" | "error">(() =>
+    token ? "loading" : "error",
+  );
+  const [message, setMessage] = useState(() =>
+    token ? "" : "رمز التحقق مفقود",
+  );
   const [, startTransition] = useTransition();
 
   useEffect(() => {
-    if (!token) {
-      setStatus("error");
-      setMessage("رمز التحقق مفقود");
-      return;
-    }
+    if (!token) return;
     startTransition(async () => {
       const result = await verifyEmail(token);
       if (result.success) {

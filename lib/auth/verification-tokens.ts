@@ -18,6 +18,10 @@ export async function createVerificationToken(userId: string): Promise<string> {
 }
 
 export async function createPasswordResetToken(userId: string): Promise<string> {
+  await db.verificationToken.deleteMany({
+    where: { userId, type: TokenType.RESET },
+  });
+
   const token = randomUUID();
   await db.verificationToken.create({
     data: {

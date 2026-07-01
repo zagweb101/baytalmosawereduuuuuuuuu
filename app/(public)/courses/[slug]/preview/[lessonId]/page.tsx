@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCourseBySlug } from "@/lib/actions/courses";
+import { getPreviewLessonContent } from "@/lib/actions/courses";
 import { getCurrentUser } from "@/lib/auth/session";
-import { canPreviewLesson, isEnrolled } from "@/lib/permissions";
-import { getPreviewLessonIdsForCourse } from "@/lib/preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,40 +14,11 @@ export default async function LessonPreviewPage({
   params: Promise<{ slug: string; lessonId: string }>;
 }) {
   const { slug, lessonId } = await params;
-  const course = await getCourseBySlug(slug);
-  if (!course || course.status !== "PUBLISHED") notFound();
+  const data = await getPreviewLessonContent(slug, lessonId);
+  if (!data) notFound();
 
+  const { course, lesson, previewLessons } = data;
   const user = await getCurrentUser();
-  const enrolled = user ? await isEnrolled(user.id, course.id) : false;
-
-  if (enrolled) {
-    notFound();
-  }
-
-  const sections = course.sections.map((s) => ({
-    order: s.order,
-    lessons: s.lessons.map((l) => ({
-      id: l.id,
-      order: l.order,
-      isFreePreview: l.isFreePreview,
-    })),
-  }));
-
-  const allowed = await canPreviewLesson(
-    user,
-    course,
-    lessonId,
-    sections,
-  );
-  if (!allowed) notFound();
-
-  const previewIds = await getPreviewLessonIdsForCourse(sections);
-  const allLessons = course.sections
-    .flatMap((s) => s.lessons)
-    .filter((l) => previewIds.has(l.id));
-  const lesson = allLessons.find((l) => l.id === lessonId);
-  if (!lesson) notFound();
-
   const price = toNumber(course.price);
   const isFree = price === 0;
 
@@ -119,7 +88,7 @@ export default async function LessonPreviewPage({
             <CardContent className="p-4">
               <h2 className="font-semibold mb-3">دروس المعاينة</h2>
               <ul className="space-y-2">
-                {allLessons.map((l) => (
+                {previewLessons.map((l) => (
                   <li key={l.id}>
                     <Link
                       href={`/courses/${course.slug}/preview/${l.id}`}

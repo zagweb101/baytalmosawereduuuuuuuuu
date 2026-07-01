@@ -18,10 +18,14 @@ export const authConfig = {
       return token;
     },
     async session({ session, token }) {
+      if (token.error === "SessionRevoked") {
+        return { expires: session.expires };
+      }
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as UserRole;
         session.user.status = token.status as UserStatus;
+        session.sessionId = token.sessionId as string | undefined;
       }
       return session;
     },
