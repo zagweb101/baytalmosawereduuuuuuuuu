@@ -1,36 +1,175 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# منصة بيت المصور التعليمية
 
-## Getting Started
+منصة تعليمية عربية (RTL) لبيع وتقديم دورات التصوير الفوتوغرافي والفيديو — مبنية وفق وثيقة PRD v2.0.
 
-First, run the development server:
+## التقنيات
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Next.js 16** (App Router) + TypeScript
+- **PostgreSQL** + **Prisma 7**
+- **Auth.js (NextAuth v5)** — مصادقة بالبريد وكلمة المرور
+- **Zod** — التحقق من المدخلات
+- **Tailwind CSS 4** — واجهة عربية متجاوبة
+
+## المتطلبات
+
+- Node.js 20+
+- PostgreSQL 15+ (محلي، Docker، أو [Neon](https://neon.tech) مجاني)
+
+## التشغيل السريع
+
+### 1. إعداد البيئة
+
+```powershell
+copy .env.example .env
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+عدّل `.env` وأضف `DATABASE_URL` و`AUTH_SECRET` (سلسلة عشوائية طويلة).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 2. قاعدة البيانات
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**خيار أ — Docker:**
 
-## Learn More
+```powershell
+docker compose up -d
+npm run db:migrate
+npm run db:seed
+```
 
-To learn more about Next.js, take a look at the following resources:
+**خيار ب — PostgreSQL محلي أو Neon:**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+ضع رابط الاتصال في `DATABASE_URL` ثم:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```powershell
+npm run db:migrate
+npm run db:seed
+```
 
-## Deploy on Vercel
+**خيار ج — Prisma Dev (بدون Docker):**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```powershell
+npx prisma dev
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 3. تشغيل التطبيق
+
+```powershell
+npm install
+npm run dev
+```
+
+افتح [http://localhost:3000](http://localhost:3000)
+
+## البريد الإلكتروني
+
+بدون إعداد SMTP، تُطبع الرسائل في الطرفية (mock). للإنتاج:
+
+```env
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your-user
+SMTP_PASS=your-password
+SMTP_FROM=noreply@baytalmosawer.com
+```
+
+## شهادات PDF
+
+- تحميل من `/dashboard/certificates` → **تحميل PDF**
+- API: `GET /api/certificates/[id]/pdf` (يتطلب تسجيل دخول)
+- لدعم العربية في PDF: ضع `Cairo-Regular.ttf` في `assets/fonts/`
+
+## Stripe (دفع حقيقي)
+
+```env
+PAYMENT_PROVIDER=stripe
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+Webhook: `POST /api/webhooks/stripe` — حدث `checkout.session.completed`
+
+## اختبارات E2E
+
+```bash
+npm run build && npm run start   # في طرفية
+npm run test:e2e                 # في طرفية أخرى
+```
+
+## النشر (GitHub + Railway)
+
+دليل كامل: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+
+```powershell
+# رفع GitHub
+git add .
+git commit -m "منصة بيت المصور — جاهزة للإنتاج"
+git branch -M main
+gh repo create baytalmosawer --private --source=. --push
+```
+
+على Railway: أضف PostgreSQL + اربط `DATABASE_URL` + اضبط `AUTH_SECRET` و`NEXTAUTH_URL`.
+
+## حسابات تجريبية (بعد seed)
+
+| الدور | البريد | كلمة المرور |
+|-------|--------|-------------|
+| مدير | `admin@baytalmosawer.com` | `Admin123!` |
+| مدرب | `instructor@baytalmosawer.com` | `Instructor123!` |
+| طالب | `student@baytalmosawer.com` | `Student123!` |
+
+## هيكل المنصة
+
+| المسار | الوصف |
+|--------|--------|
+| `/` | الصفحة الرئيسية |
+| `/courses` | كتالوج الدورات |
+| `/courses/[slug]` | تفاصيل الدورة والاشتراك |
+| `/login` `/register` | المصادقة |
+| `/dashboard` | لوحة الطالب |
+| `/instructor` | لوحة المدرب |
+| `/admin` | لوحة الإدارة |
+| `/verify-certificate` | التحقق من الشهادة |
+
+## مراحل التنفيذ (مكتملة)
+
+| المرحلة | المحتوى |
+|---------|---------|
+| 0 | إعداد المشروع، Prisma، Tailwind، هوية بصرية |
+| 1 | مصادقة، أدوار، middleware، تأكيد بريد |
+| 2 | دورات، أقسام، دروس، مراجعة ونشر |
+| 3 | تسجيلات، تقدم، مشغّل تعلم |
+| 4 | طلبات، دفع تجريبي، ضريبة وعمولة، قسائم |
+| 5 | اختبارات، شهادات، تحقق |
+| 6 | تقييمات، Audit Log |
+| 7 | تقارير، إشعارات بريد (وضع تجريبي) |
+| 8 | بحث وتصفية، واجهة RTL |
+| 9 | Stripe، جلسات، E2E، توكنات DB |
+
+## قواعد العمل الحرجة
+
+- السعر والضريبة والعمولة تُحسب على **الخادم**
+- لا Enrollment لدورة مدفوعة إلا بعد `PAID`
+- الشهادة عند 100% + اجتياز الاختبار (إن وُجد)
+- المدرب يعدّل دوراته فقط؛ المدير ينشر
+- لا حذف نهائي لدورة بها طلاب — أرشفة فقط
+
+## أوامر مفيدة
+
+```powershell
+npm run dev          # تشغيل التطوير
+npm run build        # بناء الإنتاج
+npm run db:studio    # واجهة قاعدة البيانات
+npm run db:seed      # بيانات تجريبية
+```
+
+## الملفات المرجعية
+
+- `prisma/schema.prisma` — نموذج البيانات
+- `lib/actions/` — منطق الأعمال (Server Actions)
+- `docs/PRD.md` — وثيقة المتطلبات
+- `docs/DEPLOYMENT.md` — دليل النشر على Railway
+
+## ملاحظات
+
+- **الدفع:** Mock Provider في MVP — جاهز لربط بوابة سعودية لاحقًا
+- **البريد:** يُطبع في Console في بيئة التطوير
+- **الفيديو:** روابط YouTube أو ملفات مباشرة عبر `videoRef`
