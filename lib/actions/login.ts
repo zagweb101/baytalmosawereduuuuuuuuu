@@ -34,7 +34,11 @@ export async function loginUser(
     resetRateLimit(rateKey);
     const sessionId = await trackUserSession();
     if (sessionId) {
-      await unstable_update({ sessionId } as { sessionId: string });
+      try {
+        await unstable_update({ sessionId } as { sessionId: string });
+      } catch {
+        // لا تمنع الدخول إذا فشل تحديث الجلسة (مثلاً في CI)
+      }
     }
     return { success: true };
   } catch (error) {

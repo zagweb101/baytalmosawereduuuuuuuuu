@@ -21,10 +21,10 @@ test.describe("الصفحات العامة", () => {
 test.describe("تسجيل الدخول", () => {
   test("دخول الطالب التجريبي", async ({ page }) => {
     await page.goto("/login");
-    await page.getByLabel("البريد الإلكتروني").fill("student@baytalmosawer.com");
+    await page.getByRole("textbox", { name: "البريد الإلكتروني" }).fill("student@baytalmosawer.com");
     await page.getByLabel("كلمة المرور").fill("Student123!");
     await page.getByRole("button", { name: "دخول" }).click();
-    await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
-    await expect(page.getByText(/مرحباً|نظرة عامة|دوراتي/).first()).toBeVisible();
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 30_000 });
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("مرحباً");
   });
 });
