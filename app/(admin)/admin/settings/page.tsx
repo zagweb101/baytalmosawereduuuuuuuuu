@@ -2,9 +2,12 @@
 
 import { useTransition, useEffect, useState } from "react";
 import {
+  getInfrastructureStatusForAdmin,
   getPlatformSettings,
   updatePlatformSettings,
 } from "@/lib/actions/settings";
+import { InfrastructureStatusCard } from "@/components/shared/infrastructure-status-card";
+import type { InfrastructureStatus } from "@/lib/config/infrastructure";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,11 +18,16 @@ type Settings = NonNullable<Awaited<ReturnType<typeof getPlatformSettings>>>;
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [infrastructure, setInfrastructure] = useState<{
+    status: InfrastructureStatus;
+    productionReady: boolean;
+  } | null>(null);
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
     getPlatformSettings().then(setSettings);
+    getInfrastructureStatusForAdmin().then(setInfrastructure);
   }, []);
 
   if (!settings) {
@@ -31,8 +39,14 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <h1 className="text-2xl font-bold mb-8">إعدادات المنصة</h1>
+    <div className="container mx-auto px-4 py-8 max-w-2xl space-y-8">
+      <h1 className="text-2xl font-bold">إعدادات المنصة</h1>
+      {infrastructure && (
+        <InfrastructureStatusCard
+          status={infrastructure.status}
+          productionReady={infrastructure.productionReady}
+        />
+      )}
       <Card>
         <CardHeader>
           <CardTitle>الإعدادات العامة</CardTitle>

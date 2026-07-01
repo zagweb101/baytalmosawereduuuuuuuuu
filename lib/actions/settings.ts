@@ -6,6 +6,10 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/session";
 import { failure, success, type ActionResult } from "@/lib/actions/types";
+import {
+  getInfrastructureStatus,
+  isProductionReady,
+} from "@/lib/config/infrastructure";
 import { UserRole } from "@prisma/client";
 
 const categorySchema = z.object({
@@ -41,6 +45,15 @@ const settingsSchema = z.object({
 export async function getPlatformSettings() {
   await requireRole(UserRole.ADMIN);
   return db.platformSettings.findUnique({ where: { id: "default" } });
+}
+
+export async function getInfrastructureStatusForAdmin() {
+  await requireRole(UserRole.ADMIN);
+  const status = getInfrastructureStatus();
+  return {
+    status,
+    productionReady: isProductionReady(status),
+  };
 }
 
 export async function updatePlatformSettings(

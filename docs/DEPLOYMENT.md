@@ -75,11 +75,25 @@ Webhook URL: `https://YOUR-APP.up.railway.app/api/webhooks/stripe`
 
 ### بذور البيانات (مرة واحدة)
 
-من Railway → خدمة التطبيق → **Settings** → **One-off Command** أو Shell:
-
 ```bash
 npx prisma db seed
 ```
+
+### تدوير كلمات مرور البذور (إلزامي على الإنتاج)
+
+من Railway → Shell (مرة واحدة):
+
+```bash
+npm run rotate-seed-passwords
+```
+
+احفظ كلمات المرور المطبوعة فوراً — لا تُخزَّن في أي مكان آخر.
+
+### فحص الصحة
+
+`GET /api/health` — يتحقق من اتصال قاعدة البيانات وحالة الخدمات.
+
+لوحة الإدارة → **إعدادات المنصة** تعرض حالة Stripe / SMTP / S3.
 
 ---
 
@@ -89,7 +103,7 @@ npx prisma db seed
 - [ ] `/login` يعمل
 - [ ] تسجيل دخول `admin@baytalmosawer.com` / `Admin123!`
 - [ ] `/courses` تعرض الدورات
-- [ ] HTTPS يعمل (Railway يوفره تلقائياً)
+- [ ] `/api/health` يُرجع `status: ok`
 
 ---
 
