@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { CourseStatus, type CourseLevel } from "@prisma/client";
 import { HomeLanding } from "@/components/shared/home-landing";
+import { toNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +10,7 @@ type FeaturedCourse = {
   title: string;
   slug: string;
   thumbnail: string | null;
-  price: { toNumber(): number } | number;
+  price: number;
   level: CourseLevel;
   instructor: { name: string };
   _count: { enrollments: number };
@@ -40,7 +41,10 @@ export default async function HomePage() {
         db.certificate.count(),
       ]),
     ]);
-    featuredCourses = courses as FeaturedCourse[];
+    featuredCourses = courses.map((course) => ({
+      ...course,
+      price: toNumber(course.price),
+    })) as FeaturedCourse[];
     [courseCount, instructorCount, enrollmentCount, certificateCount] = stats;
   } catch {
     // قاعدة البيانات غير متصلة بعد

@@ -5,12 +5,22 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-/** يحوّل Float أو Decimal من Prisma إلى number */
-export function toNumber(amount: number | { toNumber(): number }): number {
-  return typeof amount === "number" ? amount : amount.toNumber();
+/** يحوّل Float أو Decimal من Prisma (أو string بعد تسلسل RSC) إلى number */
+export function toNumber(
+  amount: number | string | { toNumber(): number } | null | undefined,
+): number {
+  if (amount == null) return 0;
+  if (typeof amount === "number") return amount;
+  if (typeof amount === "string") return parseFloat(amount) || 0;
+  if (typeof amount === "object" && "toNumber" in amount) {
+    return amount.toNumber();
+  }
+  return Number(amount) || 0;
 }
 
-export function formatPrice(amount: number | { toNumber(): number }): string {
+export function formatPrice(
+  amount: number | string | { toNumber(): number },
+): string {
   const value = toNumber(amount);
   if (value === 0) return "مجاني";
   return `${value.toFixed(2)} ر.س`;

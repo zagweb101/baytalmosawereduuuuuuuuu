@@ -20,7 +20,7 @@ type FeaturedCourse = {
   title: string;
   slug: string;
   thumbnail: string | null;
-  price: { toNumber(): number } | number;
+  price: number;
   level: CourseLevel;
   instructor: { name: string };
   _count: { enrollments: number };
