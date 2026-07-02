@@ -66,7 +66,11 @@ export async function registerStudent(
   });
 
   const token = await createVerificationToken(user.id);
-  await sendVerificationEmail(normalizedEmail, name, token);
+  try {
+    await sendVerificationEmail(normalizedEmail, name, token);
+  } catch (err) {
+    console.error("[registerStudent] verification email failed:", err);
+  }
 
   await createAuditLog({
     userId: user.id,
@@ -178,11 +182,15 @@ export async function forgotPassword(
   if (user) {
     const token = await createPasswordResetToken(user.id);
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-    await sendEmail({
-      to: email,
-      subject: "إعادة تعيين كلمة المرور - بيت المصور",
-      html: `<p>مرحباً ${user.name}،</p><p>اضغط على الرابط لإعادة تعيين كلمة المرور:</p><p><a href="${siteUrl}/forgot-password?token=${token}">إعادة التعيين</a></p>`,
-    });
+    try {
+      await sendEmail({
+        to: email,
+        subject: "إعادة تعيين كلمة المرور - بيت المصور",
+        html: `<p>مرحباً ${user.name}،</p><p>اضغط على الرابط لإعادة تعيين كلمة المرور:</p><p><a href="${siteUrl}/forgot-password?token=${token}">إعادة التعيين</a></p>`,
+      });
+    } catch (err) {
+      console.error("[forgotPassword] reset email failed:", err);
+    }
   }
 
   return success({
