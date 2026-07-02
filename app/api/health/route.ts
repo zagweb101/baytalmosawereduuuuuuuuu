@@ -4,6 +4,7 @@ import {
   isProductionReady,
 } from "@/lib/config/infrastructure";
 import { db } from "@/lib/db";
+import { getStorageEnvCheck } from "@/lib/storage";
 
 export async function GET() {
   try {
@@ -24,5 +25,6 @@ export async function GET() {
     payments: infrastructure.payments.provider,
     email: infrastructure.email.status,
     storage: infrastructure.storage.status,
+    storageEnv: getStorageEnvCheck(),
   });
 }
