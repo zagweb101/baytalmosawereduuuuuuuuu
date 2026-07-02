@@ -39,30 +39,31 @@ export function CourseCard({
   const link = href ?? `/courses/${slug}`;
 
   return (
-    <Link href={link}>
-      <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
-        <div className="aspect-video bg-gradient-to-br from-brand-purple/20 to-brand-magenta/20 relative overflow-hidden">
+    <Link href={link} className="block h-full">
+      <Card className="brand-gradient-border group h-full overflow-hidden border-border/50 bg-card/50 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1 hover:shadow-xl hover:shadow-brand-purple/10">
+        <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-brand-purple/20 to-brand-magenta/20">
           {thumbnail ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={thumbnail}
               alt={title}
-              className="h-full w-full object-cover transition-transform group-hover:scale-105"
+              className="h-full w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-110"
             />
           ) : (
             <div className="flex h-full items-center justify-center brand-gradient-text text-4xl font-bold opacity-30">
               بم
             </div>
           )}
-          <Badge className="absolute top-3 start-3">{levelLabels[level]}</Badge>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+          <Badge className="absolute top-3 start-3 backdrop-blur-sm">{levelLabels[level]}</Badge>
         </div>
-        <CardContent className="p-4">
-          <h3 className="font-semibold line-clamp-2 group-hover:text-brand-magenta transition-colors">
+        <CardContent className="p-5">
+          <h3 className="font-semibold line-clamp-2 transition-colors duration-300 group-hover:text-brand-magenta-light">
             {title}
           </h3>
-          <p className="text-sm text-muted mt-1">{instructorName}</p>
-          <div className="flex items-center justify-between mt-3">
-            <span className="font-bold text-brand-purple">
+          <p className="mt-1.5 text-sm text-muted">{instructorName}</p>
+          <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-3">
+            <span className="font-bold brand-gradient-text">
               {formatPrice(price)}
             </span>
             <div className="flex items-center gap-3 text-xs text-muted">

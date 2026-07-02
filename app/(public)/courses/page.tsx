@@ -43,10 +43,13 @@ export default async function CoursesPage({
   });
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">الدورات التعليمية</h1>
+    <div className="container mx-auto px-4 py-10 md:py-14">
+      <div className="mb-10">
+        <p className="mb-2 text-sm font-medium text-brand-magenta-light">الكتالوج</p>
+        <h1 className="text-3xl font-bold md:text-4xl">الدورات التعليمية</h1>
+      </div>
 
-      <form className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 p-4 rounded-xl border border-border bg-card">
+      <form className="glass-card mb-10 grid grid-cols-1 gap-4 p-5 md:grid-cols-4 md:p-6">
         <Input name="search" placeholder="ابحث عن دورة..." defaultValue={params.search} />
         <Select name="category" defaultValue={params.category ?? ""}>
           <option value="">كل التصنيفات</option>

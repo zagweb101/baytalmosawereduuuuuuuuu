@@ -12,11 +12,11 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    "brand-gradient text-white hover:opacity-90 shadow-md shadow-brand-magenta/20",
+    "brand-gradient text-white hover:opacity-90 shadow-md shadow-brand-magenta/25 hover:shadow-lg hover:shadow-brand-magenta/30 hover:-translate-y-0.5 active:translate-y-0",
   secondary:
-    "bg-brand-purple text-white hover:bg-brand-purple-light",
+    "bg-brand-purple text-white hover:bg-brand-purple-light hover:-translate-y-0.5 active:translate-y-0 shadow-md shadow-brand-purple/20",
   outline:
-    "border border-border bg-transparent hover:bg-card",
+    "border border-border bg-transparent hover:bg-card/80 hover:border-brand-magenta/30",
   ghost: "hover:bg-border/50",
   danger: "bg-red-600 text-white hover:bg-red-700",
 };
@@ -37,7 +37,7 @@ export function buttonVariants({
   className?: string;
 } = {}) {
   return cn(
-    "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all",
+    "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
     "disabled:opacity-50 disabled:pointer-events-none",
     variants[variant],
     sizes[size],
