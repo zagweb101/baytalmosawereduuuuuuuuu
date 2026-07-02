@@ -6,6 +6,7 @@ import { registerStudent } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function RegisterPage() {
@@ -16,7 +17,7 @@ export default function RegisterPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl text-center">إنشاء حساب</CardTitle>
+        <CardTitle as="h1" className="text-2xl text-center">إنشاء حساب</CardTitle>
       </CardHeader>
       <CardContent>
         <form
@@ -49,8 +50,8 @@ export default function RegisterPage() {
             <Input id="password" name="password" type="password" required dir="ltr" />
             <p className="text-xs text-muted">8 أحرف على الأقل، حرف كبير ورقم</p>
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          {message && <p className="text-green-600 text-sm">{message}</p>}
+          {error && <Alert variant="error">{error}</Alert>}
+          {message && <Alert variant="success">{message}</Alert>}
           <Button type="submit" loading={pending} className="w-full">
             تسجيل
           </Button>

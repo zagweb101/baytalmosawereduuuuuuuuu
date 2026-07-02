@@ -82,7 +82,7 @@ export async function verifyCertificate(
   const headersList = await headers();
   const ip = headersList.get("x-forwarded-for") ?? "unknown";
 
-  if (!checkVerifyRateLimit(ip)) {
+  if (!(await checkVerifyRateLimit(ip))) {
     return failure("تجاوزت عدد المحاولات المسموحة. حاول لاحقاً.");
   }
 

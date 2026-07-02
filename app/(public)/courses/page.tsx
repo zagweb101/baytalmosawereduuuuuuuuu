@@ -5,8 +5,10 @@ import { CourseCard } from "@/components/shared/course-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { buildCoursesPageUrl } from "@/lib/url";
 import { BookOpen } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { CourseLevel } from "@prisma/client";
 
 type SearchParams = Promise<{
@@ -25,6 +27,12 @@ export default async function CoursesPage({
   const params = await searchParams;
   const page = Number(params.page ?? 1);
   const categories = await getCategories();
+  const filters = {
+    search: params.search,
+    category: params.category,
+    level: params.level,
+    price: params.price,
+  };
 
   const { courses, totalPages } = await getCourses({
     search: params.search,
@@ -90,11 +98,15 @@ export default async function CoursesPage({
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                 <Link
                   key={p}
-                  href={`/courses?page=${p}${params.search ? `&search=${params.search}` : ""}`}
+                  href={buildCoursesPageUrl(p, filters)}
+                  className={cn(
+                    buttonVariants({
+                      variant: p === page ? "primary" : "outline",
+                      size: "sm",
+                    }),
+                  )}
                 >
-                  <Button variant={p === page ? "primary" : "outline"} size="sm">
-                    {p}
-                  </Button>
+                  {p}
                 </Link>
               ))}
             </div>

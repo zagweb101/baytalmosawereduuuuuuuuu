@@ -134,7 +134,7 @@ model Course {
   thumbnail        String?
   status           CourseStatus @default(DRAFT)
   level            CourseLevel  @default(BEGINNER)
-  price            Float        @default(0)
+  price            Decimal      @default(0) @db.Decimal(10, 2)
   durationHours    Int          @default(0)
   rejectionReason  String?
   learningOutcomes Json         @default("[]")
@@ -234,10 +234,10 @@ model Order {
   studentId           String
   courseId            String
   instructorId        String
-  amount              Float
-  taxAmount           Float       @default(0)
-  commissionAmount    Float       @default(0)
-  instructorNetAmount Float       @default(0)
+  amount              Decimal     @db.Decimal(10, 2)
+  taxAmount           Decimal     @default(0) @db.Decimal(10, 2)
+  commissionAmount    Decimal     @default(0) @db.Decimal(10, 2)
+  instructorNetAmount Decimal     @default(0) @db.Decimal(10, 2)
   status              OrderStatus @default(PENDING)
   couponId            String?
   createdAt           DateTime    @default(now())
@@ -258,10 +258,10 @@ model Order {
 model Payment {
   id            String        @id @default(cuid())
   orderId       String
-  amount        Float
+  amount        Decimal       @db.Decimal(10, 2)
   status        PaymentStatus @default(PENDING)
   provider      String        @default("mock")
-  providerRef   String?
+  providerRef   String?       @unique
   failureReason String?
   paidAt        DateTime?
   createdAt     DateTime      @default(now())
@@ -276,7 +276,7 @@ model Coupon {
   id            String       @id @default(cuid())
   code          String       @unique
   discountType  DiscountType
-  discountValue Float
+  discountValue Decimal      @db.Decimal(10, 2)
   maxUses       Int?
   usedCount     Int          @default(0)
   expiresAt     DateTime?
@@ -351,6 +351,7 @@ model Certificate {
   course     Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
   enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, courseId])
   @@index([userId])
   @@index([courseId])
 }
@@ -435,8 +436,8 @@ model VerificationToken {
 model PlatformSettings {
   id                      String   @id @default("default")
   siteName                String   @default("بيت المصور")
-  commissionPercent       Float  @default(20)
-  vatPercent              Float  @default(15)
+  commissionPercent       Decimal  @default(20) @db.Decimal(5, 2)
+  vatPercent              Decimal  @default(15) @db.Decimal(5, 2)
   maxFreePreviewLessons   Int      @default(2)
   refundDays              Int      @default(7)
   refundMaxProgressPercent Int     @default(20)

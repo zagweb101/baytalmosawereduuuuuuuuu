@@ -11,6 +11,10 @@ export async function getCurrentUser() {
     return null;
   }
 
+  if (session.user.error === "SessionRevoked") {
+    return null;
+  }
+
   const user = await db.user.findUnique({
     where: { id: session.user.id },
     select: {
@@ -23,8 +27,31 @@ export async function getCurrentUser() {
       image: true,
       emailVerified: true,
       createdAt: true,
+      sessionVersion: true,
     },
   });
+
+  if (!user) {
+    return null;
+  }
+
+  const tokenVersion = session.user.sessionVersion;
+  if (
+    tokenVersion !== undefined &&
+    user.sessionVersion !== tokenVersion
+  ) {
+    return null;
+  }
+
+  if (session.sessionId) {
+    const activeSession = await db.userSession.findUnique({
+      where: { id: session.sessionId },
+      select: { userId: true },
+    });
+    if (!activeSession || activeSession.userId !== user.id) {
+      return null;
+    }
+  }
 
   return user;
 }

@@ -18,6 +18,7 @@
     "db:studio": "prisma studio",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:unit": "tsx --test tests/unit/*.test.ts",
     "rotate-seed-passwords": "tsx scripts/rotate-seed-passwords.ts"
   },
   "prisma": {

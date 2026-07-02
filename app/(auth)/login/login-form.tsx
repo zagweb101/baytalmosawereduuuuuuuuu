@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function LoginForm() {
@@ -28,7 +29,7 @@ export default function LoginForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl text-center">تسجيل الدخول</CardTitle>
+        <CardTitle as="h1" className="text-2xl text-center">تسجيل الدخول</CardTitle>
       </CardHeader>
       <CardContent>
         <form
@@ -59,7 +60,7 @@ export default function LoginForm() {
             <Label htmlFor="password">كلمة المرور</Label>
             <Input id="password" name="password" type="password" required dir="ltr" />
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && <Alert variant="error">{error}</Alert>}
           <Button type="submit" loading={pending} className="w-full">
             دخول
           </Button>

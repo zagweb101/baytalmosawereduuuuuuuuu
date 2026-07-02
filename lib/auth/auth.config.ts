@@ -25,6 +25,7 @@ export const authConfig = {
         session.user.id = token.id as string;
         session.user.role = token.role as UserRole;
         session.user.status = token.status as UserStatus;
+        session.user.sessionVersion = token.sessionVersion as number | undefined;
         session.sessionId = token.sessionId as string | undefined;
       }
       return session;

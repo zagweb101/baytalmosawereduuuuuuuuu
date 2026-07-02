@@ -2,9 +2,7 @@
  * تدوير كلمات مرور حسابات البذور على الإنتاج (مرة واحدة بعد النشر).
  *
  * الاستخدام على Railway Shell:
- *   npx tsx scripts/rotate-seed-passwords.ts
- *
- * يطبع كلمات المرور الجديدة في stdout — احفظها فوراً ثم امسح السجل.
+ *   CONFIRM_ROTATE=1 npx tsx scripts/rotate-seed-passwords.ts
  */
 import "dotenv/config";
 import { randomBytes } from "crypto";
@@ -23,6 +21,13 @@ function generatePassword(): string {
 }
 
 async function main() {
+  if (process.env.NODE_ENV === "production" && process.env.CONFIRM_ROTATE !== "1") {
+    console.error(
+      "للتشغيل على الإنتاج: CONFIRM_ROTATE=1 npx tsx scripts/rotate-seed-passwords.ts",
+    );
+    process.exit(1);
+  }
+
   console.log("تدوير كلمات مرور حسابات البذور...\n");
 
   for (const email of SEED_EMAILS) {
@@ -36,13 +41,13 @@ async function main() {
     const passwordHash = await bcrypt.hash(password, 12);
     await db.user.update({
       where: { email },
-      data: { passwordHash },
+      data: { passwordHash, sessionVersion: { increment: 1 } },
     });
 
     console.log(`${email}\n  ${password}\n`);
   }
 
-  console.log("تم. غيّر كلمات المرور في مدير كلمات المرور واحذف هذا السجل.");
+  console.log("تم. احفظ كلمات المرور في مدير كلمات المرور واحذف هذا السجل.");
 }
 
 main()

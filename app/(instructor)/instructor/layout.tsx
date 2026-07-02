@@ -28,7 +28,9 @@ export default async function InstructorLayout({
           title="لوحة المدرب"
           homeHref="/instructor"
         />
-        <div className="flex-1 pb-20 lg:pb-0">{children}</div>
+        <main id="main-content" className="flex-1 pb-20 lg:pb-0">
+          {children}
+        </main>
       </div>
     </>
   );

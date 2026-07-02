@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { AuthError } from "next-auth";
 import { signIn, unstable_update } from "@/lib/auth/auth";
-import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit";
+import { checkRateLimitAsync, resetRateLimit } from "@/lib/rate-limit";
 import { trackUserSession } from "@/lib/sessions/track";
 
 const LOGIN_MAX = 10;
@@ -18,7 +18,7 @@ export async function loginUser(
     headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const rateKey = `login:${ip}:${email.toLowerCase()}`;
 
-  if (!checkRateLimit(rateKey, LOGIN_MAX, LOGIN_WINDOW_MS)) {
+  if (!(await checkRateLimitAsync(rateKey, LOGIN_MAX, LOGIN_WINDOW_MS))) {
     return {
       success: false,
       error: "تجاوزت عدد محاولات الدخول. حاول بعد 15 دقيقة.",

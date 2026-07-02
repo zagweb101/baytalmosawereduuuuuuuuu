@@ -30,6 +30,11 @@ export function ProgressBar({
           "w-full rounded-full bg-border overflow-hidden",
           size === "sm" ? "h-1.5" : "h-2.5",
         )}
+        role="progressbar"
+        aria-valuenow={percent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="التقدم"
       >
         <div
           className="h-full brand-gradient rounded-full transition-all duration-500"

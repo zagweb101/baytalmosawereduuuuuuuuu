@@ -18,7 +18,7 @@ import {
 } from "@/lib/auth/verification-tokens";
 import { requireAuth } from "@/lib/auth/session";
 import { invalidateUserSessions } from "@/lib/auth/session-invalidation";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimitAsync } from "@/lib/rate-limit";
 import { failure, success, type ActionResult } from "@/lib/actions/types";
 
 export async function registerStudent(
@@ -39,7 +39,7 @@ export async function registerStudent(
   const headersList = await headers();
   const ip =
     headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (!checkRateLimit(`register:${ip}`, 5, 60 * 60 * 1000)) {
+  if (!(await checkRateLimitAsync(`register:${ip}`, 5, 60 * 60 * 1000))) {
     return failure("تجاوزت عدد محاولات التسجيل. حاول لاحقاً.");
   }
 
@@ -94,7 +94,7 @@ export async function verifyEmail(
   const headersList = await headers();
   const ip =
     headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (!checkRateLimit(`verify-email:${ip}`, 10, 15 * 60 * 1000)) {
+  if (!(await checkRateLimitAsync(`verify-email:${ip}`, 10, 15 * 60 * 1000))) {
     return failure("تجاوزت عدد المحاولات. حاول لاحقاً.");
   }
 
@@ -173,7 +173,7 @@ export async function forgotPassword(
   const headersList = await headers();
   const ip =
     headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (!checkRateLimit(`forgot-password:${ip}`, 5, 60 * 60 * 1000)) {
+  if (!(await checkRateLimitAsync(`forgot-password:${ip}`, 5, 60 * 60 * 1000))) {
     return failure("تجاوزت عدد المحاولات. حاول لاحقاً.");
   }
 
@@ -215,7 +215,7 @@ export async function resetPassword(
   const headersList = await headers();
   const ip =
     headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (!checkRateLimit(`reset-password:${ip}`, 10, 60 * 60 * 1000)) {
+  if (!(await checkRateLimitAsync(`reset-password:${ip}`, 10, 60 * 60 * 1000))) {
     return failure("تجاوزت عدد المحاولات. حاول لاحقاً.");
   }
 

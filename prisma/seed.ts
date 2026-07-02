@@ -303,9 +303,11 @@ async function main() {
   });
 
   console.log("✅ Seed completed");
-  console.log(`   Admin: admin@baytalmosawer.com / Admin123!`);
-  console.log(`   Instructor: instructor@baytalmosawer.com / Instructor123!`);
-  console.log(`   Student: student@baytalmosawer.com / Student123!`);
+  if (process.env.CI !== "true") {
+    console.log(`   Admin: admin@baytalmosawer.com / Admin123!`);
+    console.log(`   Instructor: instructor@baytalmosawer.com / Instructor123!`);
+    console.log(`   Student: student@baytalmosawer.com / Student123!`);
+  }
   console.log(`   Courses: ${course1.title}, ${course2.title}`);
   console.log(`   Admin ID: ${admin.id}`);
   console.log(`   Student ID: ${student.id}`);

@@ -7,6 +7,8 @@ declare module "next-auth" {
       id: string;
       role: UserRole;
       status: UserStatus;
+      sessionVersion?: number;
+      error?: "SessionRevoked";
     } & DefaultSession["user"];
     sessionId?: string;
   }

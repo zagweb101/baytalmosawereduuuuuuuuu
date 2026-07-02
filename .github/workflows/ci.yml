@@ -45,12 +45,22 @@ jobs:
           node-version: "22"
           cache: npm
 
-      # NODE_ENV=production يتخطى devDependencies (tsx, prisma CLI, playwright)
       - run: npm ci --include=dev
+
+      - name: Wait for Postgres
+        run: |
+          for i in $(seq 1 30); do
+            npx prisma db execute --stdin <<< "SELECT 1" && exit 0
+            sleep 2
+          done
+          echo "Postgres not ready"
+          exit 1
 
       - run: npx prisma migrate deploy
 
-      - run: npx prisma db seed
+      - run: npx tsx prisma/seed.ts
+
+      - run: npm run test:unit
 
       - run: npm run lint
 

@@ -17,14 +17,23 @@ export async function GET() {
   }
 
   const infrastructure = getInfrastructureStatus();
+  const productionReady = isProductionReady(infrastructure);
 
   return NextResponse.json({
     status: "ok",
     database: "connected",
-    productionReady: isProductionReady(infrastructure),
-    payments: infrastructure.payments.provider,
+    productionReady,
+    payments: infrastructure.payments.status,
     email: infrastructure.email.status,
     storage: infrastructure.storage.status,
-    storageEnv: getStorageEnvCheck(),
+    auth: infrastructure.auth.ready,
+    site: infrastructure.site.issues.length === 0,
+    ...(process.env.HEALTH_DETAILED === "true"
+      ? {
+          storageEnv: getStorageEnvCheck(),
+          authIssues: infrastructure.auth.issues,
+          siteIssues: infrastructure.site.issues,
+        }
+      : {}),
   });
 }

@@ -34,12 +34,13 @@ export function CardHeader({
 export function CardTitle({
   className,
   children,
+  as: Tag = "h3",
   ...props
-}: HTMLAttributes<HTMLHeadingElement>) {
+}: HTMLAttributes<HTMLHeadingElement> & { as?: "h1" | "h2" | "h3" }) {
   return (
-    <h3 className={cn("text-lg font-semibold", className)} {...props}>
+    <Tag className={cn("text-lg font-semibold", className)} {...props}>
       {children}
-    </h3>
+    </Tag>
   );
 }
 

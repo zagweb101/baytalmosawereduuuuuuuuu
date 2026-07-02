@@ -25,10 +25,14 @@ export function formatDate(date: Date | string): string {
 }
 
 export function slugify(text: string): string {
-  return text
-    .toLowerCase()
+  const base = text
     .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/[\s_]+/g, "-")
-    .replace(/-+/g, "-");
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^\p{L}\p{N}-]/gu, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  if (base) return base;
+  return `item-${Date.now()}`;
 }

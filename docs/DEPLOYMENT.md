@@ -101,9 +101,10 @@ npm run rotate-seed-passwords
 
 - [ ] الصفحة الرئيسية تفتح
 - [ ] `/login` يعمل
-- [ ] تسجيل دخول `admin@baytalmosawer.com` / `Admin123!`
 - [ ] `/courses` تعرض الدورات
 - [ ] `/api/health` يُرجع `status: ok`
+- [ ] **تدوير كلمات المرور:** `CONFIRM_ROTATE=1 npx tsx scripts/rotate-seed-passwords.ts` (Railway Shell)
+- [ ] **Stripe (للإطلاق التجاري):** `PAYMENT_PROVIDER=stripe` + webhook على `/api/webhooks/stripe`
 
 ---
 
@@ -118,7 +119,7 @@ Railway → Settings → **Networking** → **Custom Domain**
 
 ملف `.github/workflows/ci.yml` يشغّل تلقائياً عند كل push:
 
-- lint + build + migrate + E2E
+- migrate + seed + unit tests + lint + build + E2E
 
 ---
 

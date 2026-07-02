@@ -5,6 +5,7 @@ import { createEnrollmentAfterPayment } from "@/lib/services/enrollment-service"
 import { createNotification } from "@/lib/notifications/create";
 import { createAuditLog } from "@/lib/audit";
 import { sendPaymentSuccessEmail } from "@/lib/email";
+import { captureError } from "@/lib/monitoring";
 import { toNumber } from "@/lib/utils";
 
 export async function fulfillPaidOrder(
@@ -29,38 +30,72 @@ export async function fulfillPaidOrder(
     return { success: false, error: "الطلب غير قابل للدفع" };
   }
 
+  if (providerRef) {
+    const existingPayment = await db.payment.findFirst({
+      where: { providerRef },
+    });
+    if (existingPayment) {
+      return { success: true };
+    }
+  }
+
   const amount = toNumber(order.amount);
 
-  await db.payment.create({
-    data: {
-      orderId,
-      amount,
-      status: PaymentStatus.COMPLETED,
-      providerRef,
-      paidAt: new Date(),
-    },
-  });
+  try {
+    const paid = await db.$transaction(async (tx) => {
+      const updated = await tx.order.updateMany({
+        where: { id: orderId, status: OrderStatus.PENDING },
+        data: { status: OrderStatus.PAID },
+      });
 
-  await db.order.update({
-    where: { id: orderId },
-    data: { status: OrderStatus.PAID },
-  });
+      if (updated.count === 0) {
+        const current = await tx.order.findUnique({
+          where: { id: orderId },
+          select: { status: true },
+        });
+        return current?.status === OrderStatus.PAID;
+      }
 
-  if (order.couponId) {
-    await db.coupon.update({
-      where: { id: order.couponId },
-      data: { usedCount: { increment: 1 } },
+      await tx.payment.create({
+        data: {
+          orderId,
+          amount,
+          status: PaymentStatus.COMPLETED,
+          providerRef,
+          paidAt: new Date(),
+        },
+      });
+
+      if (order.couponId) {
+        await tx.coupon.update({
+          where: { id: order.couponId },
+          data: { usedCount: { increment: 1 } },
+        });
+      }
+
+      return true;
     });
+
+    if (!paid) {
+      return { success: false, error: "الطلب غير قابل للدفع" };
+    }
+  } catch (error) {
+    captureError(error, { orderId, providerRef, action: "fulfillPaidOrder" });
+    return { success: false, error: "فشل إتمام الطلب" };
   }
 
   await createEnrollmentAfterPayment(orderId);
 
-  await sendPaymentSuccessEmail(
-    order.student.email,
-    order.student.name,
-    order.course.title,
-    amount,
-  );
+  try {
+    await sendPaymentSuccessEmail(
+      order.student.email,
+      order.student.name,
+      order.course.title,
+      amount,
+    );
+  } catch (error) {
+    captureError(error, { orderId, action: "payment-success-email" });
+  }
 
   await createNotification({
     userId: order.studentId,

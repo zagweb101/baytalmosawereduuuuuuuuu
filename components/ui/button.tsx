@@ -27,6 +27,24 @@ const sizes: Record<ButtonSize, string> = {
   lg: "h-12 px-6 text-base",
 };
 
+export function buttonVariants({
+  variant = "primary",
+  size = "md",
+  className,
+}: {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  className?: string;
+} = {}) {
+  return cn(
+    "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all",
+    "disabled:opacity-50 disabled:pointer-events-none",
+    variants[variant],
+    sizes[size],
+    className,
+  );
+}
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
@@ -43,13 +61,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     <button
       ref={ref}
       disabled={disabled || loading}
-      className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all",
-        "disabled:opacity-50 disabled:pointer-events-none",
-        variants[variant],
-        sizes[size],
-        className,
-      )}
+      aria-busy={loading || undefined}
+      className={buttonVariants({ variant, size, className })}
       {...props}
     >
       {loading && (
