@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { usePrefersReducedMotion } from "@/components/shared/use-prefers-reduced-motion";
 
 type RevealProps = {
   children: ReactNode;
@@ -28,19 +29,14 @@ export function Reveal({
 }: RevealProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const isVisible = prefersReducedMotion || visible;
 
   useEffect(() => {
+    if (prefersReducedMotion) return;
+
     const el = ref.current;
     if (!el) return;
-
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-
-    if (prefersReducedMotion) {
-      setVisible(true);
-      return;
-    }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -54,14 +50,14 @@ export function Reveal({
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [prefersReducedMotion]);
 
   return (
     <div
       ref={ref}
       className={cn(
         "transition-all ease-out",
-        visible
+        isVisible
           ? "opacity-100 translate-x-0 translate-y-0"
           : cn("opacity-0", directionClasses[direction]),
         className,

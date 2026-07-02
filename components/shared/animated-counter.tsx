@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { usePrefersReducedMotion } from "@/components/shared/use-prefers-reduced-motion";
 
 type AnimatedCounterProps = {
   value: number;
@@ -17,19 +18,13 @@ export function AnimatedCounter({
   const ref = useRef<HTMLSpanElement>(null);
   const [display, setDisplay] = useState(0);
   const hasAnimated = useRef(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
+    if (prefersReducedMotion) return;
+
     const el = ref.current;
     if (!el) return;
-
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-
-    if (prefersReducedMotion) {
-      setDisplay(value);
-      return;
-    }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -51,11 +46,13 @@ export function AnimatedCounter({
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, [value, duration]);
+  }, [value, duration, prefersReducedMotion]);
+
+  const shown = prefersReducedMotion ? value : display;
 
   return (
     <span ref={ref} className={cn("tabular-nums", className)}>
-      {display.toLocaleString("en-US")}
+      {shown.toLocaleString("en-US")}
     </span>
   );
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { CourseLevel, CourseStatus } from "@prisma/client";
-import { Clock, Users, Star } from "lucide-react";
+import { Users, Star } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/lib/utils";
