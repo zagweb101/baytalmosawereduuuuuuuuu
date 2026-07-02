@@ -52,6 +52,7 @@ async function upstashCheck(
       ["EXPIRE", redisKey, windowSec, "NX"],
     ]),
     cache: "no-store",
+    signal: AbortSignal.timeout(5_000),
   });
 
   if (!res.ok) {

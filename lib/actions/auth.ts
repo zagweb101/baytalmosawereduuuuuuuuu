@@ -8,9 +8,10 @@ import { registerSchema } from "@/lib/validation/schemas";
 import { createAuditLog } from "@/lib/audit";
 import {
   sendVerificationEmail,
-  sendEmail,
   sendWelcomeEmail,
+  sendPasswordResetEmail,
 } from "@/lib/email";
+import { captureError } from "@/lib/monitoring";
 import {
   createVerificationToken,
   createPasswordResetToken,
@@ -181,15 +182,13 @@ export async function forgotPassword(
 
   if (user) {
     const token = await createPasswordResetToken(user.id);
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
     try {
-      await sendEmail({
-        to: email,
-        subject: "إعادة تعيين كلمة المرور - بيت المصور",
-        html: `<p>مرحباً ${user.name}،</p><p>اضغط على الرابط لإعادة تعيين كلمة المرور:</p><p><a href="${siteUrl}/forgot-password?token=${token}">إعادة التعيين</a></p>`,
-      });
+      await sendPasswordResetEmail(email, user.name, token);
     } catch (err) {
-      console.error("[forgotPassword] reset email failed:", err);
+      captureError(err, { email, action: "forgotPassword" });
+      return failure(
+        "تعذّر إرسال رسالة إعادة التعيين. تحقق من إعدادات البريد أو حاول لاحقاً.",
+      );
     }
   }
 

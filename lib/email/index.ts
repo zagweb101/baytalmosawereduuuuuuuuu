@@ -1,4 +1,5 @@
 import type { EmailPayload } from "@/lib/email/types";
+import { sendViaBrevoApi, shouldUseBrevoApi } from "@/lib/email/brevo";
 import { sendViaSmtp, shouldUseSmtp } from "@/lib/email/smtp";
 
 export type { EmailPayload } from "@/lib/email/types";
@@ -11,6 +12,11 @@ function rtlHtml(body: string): string {
 }
 
 export async function sendEmail(payload: EmailPayload): Promise<void> {
+  if (shouldUseBrevoApi()) {
+    await sendViaBrevoApi(payload);
+    return;
+  }
+
   if (shouldUseSmtp()) {
     await sendViaSmtp(payload);
     return;
@@ -47,6 +53,22 @@ export async function sendVerificationEmail(
     subject: `تفعيل حسابك - ${siteName()}`,
     html: rtlHtml(
       `<p>مرحباً ${name}،</p><p>اضغط على الرابط التالي لتفعيل حسابك:</p><p><a href="${siteUrl}/verify-email?token=${token}">تفعيل الحساب</a></p>`,
+    ),
+  });
+}
+
+export async function sendPasswordResetEmail(
+  to: string,
+  name: string,
+  token: string,
+): Promise<void> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const resetUrl = `${siteUrl}/forgot-password?token=${token}`;
+  await sendEmail({
+    to,
+    subject: `إعادة تعيين كلمة المرور - ${siteName()}`,
+    html: rtlHtml(
+      `<p>مرحباً ${name}،</p><p>تلقّينا طلباً لإعادة تعيين كلمة المرور.</p><p><a href="${resetUrl}">إعادة تعيين كلمة المرور</a></p><p>إذا لم تطلب ذلك، تجاهل هذه الرسالة.</p><p style="font-size:12px;color:#666">أو انسخ الرابط: ${resetUrl}</p>`,
     ),
   });
 }

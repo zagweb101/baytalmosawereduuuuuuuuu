@@ -44,6 +44,8 @@ export function getInfrastructureStatus(): InfrastructureStatus {
   let emailStatus: ServiceStatus = "mock";
   if (process.env.EMAIL_MOCK === "true") {
     emailIssues.push("EMAIL_MOCK=true — البريد يُسجَّل في السجلات فقط");
+  } else if (process.env.BREVO_API_KEY?.trim()) {
+    emailStatus = "ready";
   } else if (shouldUseSmtp()) {
     emailStatus = "ready";
   } else {

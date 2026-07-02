@@ -1,6 +1,8 @@
 import nodemailer from "nodemailer";
 import type { EmailPayload } from "@/lib/email/types";
 
+const SEND_TIMEOUT_MS = 20_000;
+
 function isSmtpConfigured(): boolean {
   return Boolean(
     process.env.SMTP_HOST &&
@@ -19,7 +21,19 @@ function createTransport() {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 15_000,
   });
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error("SMTP timeout")), ms),
+    ),
+  ]);
 }
 
 export async function sendViaSmtp(payload: EmailPayload): Promise<void> {
@@ -29,13 +43,16 @@ export async function sendViaSmtp(payload: EmailPayload): Promise<void> {
     process.env.EMAIL_FROM ??
     "noreply@baytalmosawer.com";
 
-  await transport.sendMail({
-    from,
-    to: payload.to,
-    subject: payload.subject,
-    html: payload.html,
-    text: payload.text ?? payload.html.replace(/<[^>]+>/g, ""),
-  });
+  await withTimeout(
+    transport.sendMail({
+      from,
+      to: payload.to,
+      subject: payload.subject,
+      html: payload.html,
+      text: payload.text ?? payload.html.replace(/<[^>]+>/g, ""),
+    }),
+    SEND_TIMEOUT_MS,
+  );
 }
 
 export function shouldUseSmtp(): boolean {

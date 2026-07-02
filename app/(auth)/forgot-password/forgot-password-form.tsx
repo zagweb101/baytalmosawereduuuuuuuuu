@@ -70,6 +70,7 @@ export default function ForgotPasswordForm() {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             setError("");
+            setMessage("");
             startTransition(async () => {
               const result = await forgotPassword(fd);
               if (result.success) {
